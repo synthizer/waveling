@@ -1,34 +1,14 @@
 {
-  "editor.rulers": [
-    120
-  ],
-  "files.eol": "\n",
-  "files.associations": {
-    "chrono": "cpp",
-    "*.pyx": "python",
-  },
-  "[python]": {
-    "editor.insertSpaces": true,
-    "editor.tabSize": 4
-  },
-  "[markdown]": {
-    "editor.wordWrap": "on",
-    "editor.quickSuggestions": {
-      "comments": "off",
-      "strings": "off",
-      "other": "off"
-    },
-    "editor.insertSpaces": true,
-  },
-  "[julia]": {
-    "editor.quickSuggestions": {
-      "comments": "on",
-      "strings": "on",
-      "other": "on"
-    },
+    "editor.detectIndentation": false,
     "editor.tabSize": 4,
-    "editor.insertSpaces": true
-  },
-  "editor.tabSize": 2,
-  "editor.insertSpaces": true
+    "editor.insertSpaces": true,
+    "files.eol": "\n",
+    "rust-analyzer.checkOnSave.command": "clippy",
+    "editor.rulers": [
+        120
+    ],
+    "rust-analyzer.diagnostics.disabled": [
+        "unresolved-macro-call"
+    ],
+    "python.formatter": "black"
 }
