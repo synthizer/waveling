@@ -25,7 +25,7 @@ use super::*;
 ///   output, that is, the IR models even single variables that last longer than one program iteration as pointers.
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd, Copy, Clone)]
 pub struct ValueRef {
-    index: usize,
+    index: generational_arena::Index,
 }
 
 // The rest of this describes internal types which are stored in the context's tables.
@@ -51,7 +51,7 @@ pub struct ValueResolutionFailed;
 impl ValueRef {
     fn resolve<'a>(&self, context: &'a Context) -> Result<&'a ValueDescriptor> {
         Ok(context
-            .value_table
+            .value_arena
             .get(self.index)
             .ok_or(ValueResolutionFailed)?)
     }
@@ -98,8 +98,7 @@ impl Context {
 
     fn new_value_impl(&mut self, value_type: crate::types::Type, kind: ValueKind) -> ValueRef {
         let vd = ValueDescriptor { value_type, kind };
-        let index = self.value_table.len();
-        self.value_table.push(vd);
+        let index = self.value_arena.insert(vd);
         ValueRef { index }
     }
 }

@@ -4,12 +4,14 @@ mod value_ref;
 pub use constant_ref::*;
 pub use value_ref::*;
 
+use generational_arena::Arena;
+
 use crate::constant::Constant;
 
 #[derive(Default)]
 pub struct Context {
-    constant_table: Vec<Constant>,
-    value_table: Vec<ValueDescriptor>,
+    constant_arena: Arena<Constant>,
+    value_arena: Arena<ValueDescriptor>,
 }
 
 impl Context {
