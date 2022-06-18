@@ -6,3 +6,4 @@ pub mod types;
 
 pub use context::Context;
 pub use inst_builder::InstBuilder;
+pub use types::Type;
