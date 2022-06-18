@@ -83,6 +83,35 @@ pub enum Instruction {
         input: ValueRef,
     },
 
+    Min {
+        output: ValueRef,
+        left: ValueRef,
+        right: ValueRef,
+    },
+
+    Max {
+        output: ValueRef,
+        left: ValueRef,
+        right: ValueRef,
+    },
+
+    Clamp {
+        output: ValueRef,
+        input: ValueRef,
+        lower: ValueRef,
+        upper: ValueRef,
+    },
+
+    ToF32 {
+        input: ValueRef,
+        output: ValueRef,
+    },
+
+    ToF64 {
+        input: ValueRef,
+        output: ValueRef,
+    },
+
     /// Read a state at a given index.
     ///
     /// Index should be an integral scalar.
@@ -134,34 +163,5 @@ pub enum Instruction {
     ReadProperty {
         output: ValueRef,
         index: usize,
-    },
-
-    Min {
-        output: ValueRef,
-        left: ValueRef,
-        right: ValueRef,
-    },
-
-    Max {
-        output: ValueRef,
-        left: ValueRef,
-        right: ValueRef,
-    },
-
-    Clamp {
-        output: ValueRef,
-        input: ValueRef,
-        lower: ValueRef,
-        upper: ValueRef,
-    },
-
-    ToF32 {
-        input: ValueRef,
-        output: ValueRef,
-    },
-
-    ToF64 {
-        input: ValueRef,
-        output: ValueRef,
     },
 }
