@@ -21,16 +21,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
-name = "dsp_ir"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "rust_decimal",
- "smallvec",
- "thiserror",
-]
-
-[[package]]
 name = "num-traits"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -116,3 +106,13 @@ name = "unicode-ident"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5bd2fe26506023ed7b5e1e315add59d6f584c621d037f9368fea9cfb988f368c"
+
+[[package]]
+name = "waveling_dsp_ir"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "rust_decimal",
+ "smallvec",
+ "thiserror",
+]
