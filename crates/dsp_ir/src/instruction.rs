@@ -127,6 +127,15 @@ pub enum Instruction {
         index: usize,
     },
 
+    /// Read a property of the program.
+    ///
+    /// Properties are always f64 (and so internally converted to integers by user code if that's what they need).
+    /// Currently we additionally place the constraint that properties are scalar.
+    ReadProperty {
+        output: ValueRef,
+        index: usize,
+    },
+
     Min {
         output: ValueRef,
         left: ValueRef,
