@@ -2,6 +2,7 @@ use anyhow::Result;
 
 use super::*;
 
+#[derive(Copy, Clone)]
 pub struct InstRef {
     index: generational_arena::Index,
 }
@@ -22,6 +23,8 @@ impl InstRef {
 impl Context {
     pub fn new_instruction(&mut self, inst: crate::Instruction) -> InstRef {
         let index = self.instruction_arena.insert(inst);
-        InstRef { index }
+        let x = InstRef { index };
+        self.program.push(x);
+        x
     }
 }

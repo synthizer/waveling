@@ -24,6 +24,11 @@ pub struct Context {
     inputs: Vec<crate::Type>,
     outputs: Vec<crate::Type>,
     properties: Vec<crate::Type>,
+
+    /// the program's final execution order of instructions.
+    ///
+    /// Modified by various passes, then consumed by the backends.
+    program: Vec<InstRef>,
 }
 
 impl Context {
