@@ -167,3 +167,11 @@ dependencies = [
  "smallvec",
  "thiserror",
 ]
+
+[[package]]
+name = "waveling_interpreter"
+version = "0.1.0"
+
+[[package]]
+name = "waveling_test_bench"
+version = "0.1.0"
