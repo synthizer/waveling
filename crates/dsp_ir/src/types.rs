@@ -76,12 +76,6 @@ impl Type {
         self.primitive
     }
 
-    /// Returns a tuple `(buffer_length, vector_width)` for contexts which really only care to think of things like a C
-    /// array.
-    pub fn get_dims(&self) -> (u64, u64) {
-        (self.vector_width.get(), self.buffer_length.get())
-    }
-
     pub fn get_vector_width(&self) -> u64 {
         self.vector_width.get()
     }
