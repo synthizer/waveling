@@ -10,7 +10,7 @@ use std::num::NonZeroU64;
 use anyhow::{anyhow, Result};
 
 /// Primitive kinds.
-#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone, derive_more::Display)]
 pub enum Primitive {
     I32,
     I64,
@@ -20,7 +20,8 @@ pub enum Primitive {
 }
 
 /// Description of a type.
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone, derive_more::Display)]
+#[display(fmt = "{}<{}, {}>", primitive, vector_width, buffer_length)]
 pub struct Type {
     /// The underlying primitive type.
     primitive: Primitive,
@@ -79,5 +80,13 @@ impl Type {
     /// array.
     pub fn get_dims(&self) -> (u64, u64) {
         (self.vector_width.get(), self.buffer_length.get())
+    }
+
+    pub fn get_vector_width(&self) -> u64 {
+        self.vector_width.get()
+    }
+
+    pub fn get_buffer_length(&self) -> u64 {
+        self.buffer_length.get()
     }
 }

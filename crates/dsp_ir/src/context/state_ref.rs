@@ -1,6 +1,7 @@
 use anyhow::Result;
 
 use super::*;
+use crate::*;
 
 /// A reference to a state, an in-memory locationwhich is the same between program invocations unless set by the
 /// program.
@@ -17,11 +18,15 @@ pub struct StateDescriptor {
 pub struct StateResolutionFailed;
 
 impl StateRef {
-    pub fn resolve<'a>(&self, context: &'a Context) -> Result<&'a StateDescriptor> {
+    fn resolve<'a>(&self, context: &'a Context) -> Result<&'a StateDescriptor> {
         Ok(context
             .state_arena
             .get(self.index)
             .ok_or(StateResolutionFailed)?)
+    }
+
+    pub fn get_type<'a>(&self, context: &'a Context) -> Result<&'a Type> {
+        Ok(&self.resolve(context)?.state_type)
     }
 }
 

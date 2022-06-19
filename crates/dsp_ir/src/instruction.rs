@@ -2,8 +2,9 @@ use crate::context::*;
 
 /// The instruction enum.
 ///
-/// The convenient interface, which also verifies that invariants hold, is the [crate::InstBuilder].  The documentation
-/// on this type is authoritative as to these invariants, but this enum is admittedly difficult to work with.
+/// The convenient interface, which also verifies that invariants hold, is the [crate::inst_builder] module.  The
+/// documentation on this enum is authoritative as to these invariants, but this enum is admittedly difficult to work
+/// with.
 ///
 /// Instructions have zero or more inputs and always exactly one output.
 ///
@@ -42,9 +43,6 @@ pub enum Instruction {
     },
 
     /// Power.
-    ///
-    /// As a special case, the exponent may be of an integral type when the base is of a floating point typee, which may
-    /// be used to implement more efficiently on some backends when the exponent is a whole number.
     Pow {
         output: ValueRef,
         base: ValueRef,
@@ -55,6 +53,7 @@ pub enum Instruction {
         output: ValueRef,
         input: ValueRef,
     },
+
     FastCos {
         output: ValueRef,
         input: ValueRef,
@@ -110,6 +109,15 @@ pub enum Instruction {
     ToF64 {
         input: ValueRef,
         output: ValueRef,
+    },
+
+    /// Perform modulus on two guaranteed-to-be positive values.
+    ///
+    /// Both inputs must be of the same type.  Does either integer modulus or floating point modulus.
+    ModPositive {
+        output: ValueRef,
+        input: ValueRef,
+        divisor: ValueRef,
     },
 
     /// Read a state at a given index.

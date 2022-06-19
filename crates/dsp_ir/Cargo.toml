@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.57"
+derive_more = "0.99.17"
 generational-arena = "0.2.8"
 rust_decimal = "1.25.0"
 smallvec = { version = "1.8.0", features = ["const_generics"] }
