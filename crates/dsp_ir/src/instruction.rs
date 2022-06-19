@@ -12,7 +12,7 @@ use crate::context::*;
 /// scalar.  They don't care which is which, for convenience.
 ///
 /// The fast trigonometric instructions are only guaranteed to be accurate  on the range `-2pi` to `2pi` inclusive.  How
-/// accurate they are is still up in the air.
+/// accurate they are is still up in the air.  They must also be executed on an f32 or f64 type.
 pub enum Instruction {
     /// Addition.
     Add {

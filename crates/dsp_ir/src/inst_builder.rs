@@ -146,6 +146,12 @@ macro_rules! trig {
                 anyhow::bail!("Trigonometry may not be performed on buffers");
             }
 
+            if ty.get_primitive() != crate::types::Primitive::F32
+                && ty.get_primitive() != crate::types::Primitive::F64
+            {
+                anyhow::bail!("Trig may only be performed on floating point types");
+            }
+
             let output = ctx.new_value(ty);
             ctx.new_instruction(Instruction::$variant { output, input });
             Ok(output)
