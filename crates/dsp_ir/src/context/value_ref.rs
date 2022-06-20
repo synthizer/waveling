@@ -68,6 +68,14 @@ impl ValueRef {
             Ok(false)
         }
     }
+
+    pub fn get_constant(&self, ctx: &Context) -> Result<Option<ConstantRef>> {
+        let resolved = self.resolve(ctx)?;
+        match resolved.kind {
+            ValueKind::Computed => Ok(None),
+            ValueKind::Constant(x) => Ok(Some(x)),
+        }
+    }
 }
 
 /// Context methods for values.

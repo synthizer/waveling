@@ -16,11 +16,23 @@ pub struct ConstantRef {
 pub struct ConstantResolutionFailed;
 
 impl ConstantRef {
-    pub fn resolve<'a>(&self, context: &'a Context) -> Result<&'a Constant> {
+    pub(crate) fn resolve<'a>(&self, context: &'a Context) -> Result<&'a Constant> {
         Ok(context
             .constant_arena
             .get(self.index)
             .ok_or(ConstantResolutionFailed)?)
+    }
+
+    pub fn as_integral<'a>(&self, ctx: &'a Context) -> Result<Option<&'a [i64]>> {
+        Ok(self.resolve(ctx)?.as_integral())
+    }
+
+    pub fn as_boolean<'a>(&self, ctx: &'a Context) -> Result<Option<&'a [bool]>> {
+        Ok(self.resolve(ctx)?.as_boolean())
+    }
+
+    pub fn as_float<'a>(&self, ctx: &'a Context) -> Result<Option<&'a [rust_decimal::Decimal]>> {
+        Ok(self.resolve(ctx)?.as_float())
     }
 }
 

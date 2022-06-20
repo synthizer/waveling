@@ -47,9 +47,7 @@ macro_rules! op_vref {
             $($sig_params: ValueRef),*
         ) -> Result<()> {
             $(let $sig_params = interpreter
-                .values
-                .get(&$sig_params)
-                .ok_or_else(|| anyhow::anyhow!("Left value for instruction not found"))?;
+            .get_value_for_ref(&$sig_params)?;
             )*
 
             $({

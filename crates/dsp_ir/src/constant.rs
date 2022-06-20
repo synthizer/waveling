@@ -100,7 +100,7 @@ impl Constant {
         }
     }
 
-    fn as_boolean(&self) -> Option<&[bool]> {
+    pub fn as_boolean(&self) -> Option<&[bool]> {
         if let ConstantInner::Boolean(ref x) = self.inner {
             Some(&x[..])
         } else {
