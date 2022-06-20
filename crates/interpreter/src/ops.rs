@@ -1,3 +1,4 @@
+#![allow(unused_parens)]
 //! these are the operations of the interpreter implemented with macros so that the code duplication isn't a huge
 //! problem.
 use std::ops::{Add, Div, Mul, Rem, Sub};
@@ -47,7 +48,7 @@ macro_rules! op_vref {
             $($sig_params: ValueRef),*
         ) -> Result<()> {
             $(let $sig_params = interpreter
-            .get_value_for_ref(&$sig_params)?;
+                .get_value_for_ref($sig_params)?;
             )*
 
             $({
@@ -209,11 +210,25 @@ macro_rules! clampable_impl {
             type Output = $x;
 
             fn do_clamp(&self, min: $x, max: $x) -> Self::Output {
-                self.clamp(min, max)
+                (*self).clamp(min, max)
             }
         }
     };
 }
 
+clampable_impl!(i32);
+clampable_impl!(i64);
 clampable_impl!(f32);
 clampable_impl!(f64);
+
+op_impl!(clamp_impl, Clampable, do_clamp, value, lower, upper);
+op_vref!(
+    clamp_vref,
+    clamp_impl,
+    (value, lower, upper),
+    value,
+    I32(value, lower, upper),
+    I64(value, lower, upper),
+    F32(value, lower, upper),
+    F64(value, lower, upper)
+);

@@ -7,7 +7,7 @@ mod ops;
 use std::collections::HashMap;
 
 use anyhow::Result;
-use smallvec::{smallvec, SmallVec};
+use smallvec::SmallVec;
 
 use waveling_dsp_ir::types::Primitive;
 use waveling_dsp_ir::*;
@@ -27,13 +27,15 @@ pub struct Interpreter {
     pub(crate) inputs: Vec<Vec<f32>>,
     pub(crate) outputs: Vec<Vec<f32>>,
     pub(crate) properties: Vec<f64>,
-    pub(crate) context: Context,
 
     /// Reset on every tick.
     pub(crate) values: HashMap<ValueRef, Value>,
 
     /// Stores state between ticks.
     pub(crate) state: HashMap<ValueRef, Value>,
+
+    block_offset: u64,
+    block_counter: u64,
 }
 
 impl Value {
@@ -48,41 +50,43 @@ impl Value {
 }
 
 impl Interpreter {
-    pub fn new(context: Context) -> Result<Interpreter> {
+    pub fn new(ctx: &Context) -> Result<Interpreter> {
         let mut interpreter = Interpreter {
             values: Default::default(),
             state: Default::default(),
-            context,
+
             inputs: Default::default(),
             outputs: Default::default(),
             properties: Default::default(),
+            block_offset: 0,
+            block_counter: 0,
         };
 
-        for (_, input) in interpreter.context.iter_inputs() {
+        for (_, input) in ctx.iter_inputs() {
             if input.get_primitive() != Primitive::F32 {
                 anyhow::bail!("Non-f32 input");
             }
 
             interpreter.inputs.push(vec![
                 0.0;
-                (input.get_vector_width() * interpreter.context.get_block_size() as u64)
+                (input.get_vector_width() * ctx.get_block_size() as u64)
                     as usize
             ]);
         }
 
-        for (_, output) in interpreter.context.iter_outputs() {
+        for (_, output) in ctx.iter_outputs() {
             if output.get_primitive() != Primitive::F32 {
                 anyhow::bail!("Non-f342 output");
             }
 
             interpreter.outputs.push(vec![
                 0.0;
-                (output.get_vector_width() * interpreter.context.get_block_size() as u64)
+                (output.get_vector_width() * ctx.get_block_size() as u64)
                     as usize
             ]);
         }
 
-        for (_, prop) in interpreter.context.iter_properties() {
+        for (_, prop) in ctx.iter_properties() {
             if prop.get_primitive() != Primitive::F64 {
                 anyhow::bail!("Non-f64 property");
             }
@@ -92,66 +96,89 @@ impl Interpreter {
         Ok(interpreter)
     }
 
-    pub(crate) fn get_value_for_ref(&mut self, vref: ValueRef) -> Result<&Value> {
-        let nval = if let Some(x) = vref.get_constant(&self.context)? {
-            match vref.get_type(&self.context)?.get_primitive() {
-                Primitive::F32 => {
-                    let inner = x
-                        .as_float(&self.context)?
-                        .ok_or_else(|| {
-                            anyhow::anyhow!("Cannot convert non-float constant to float")
-                        })?
-                        .iter()
-                        .map(|i| Ok((*i).try_into()?))
-                        .collect::<Result<_>>()?;
-                    Value::F32(inner)
-                }
-                Primitive::F64 => {
-                    let inner = x
-                        .as_float(&self.context)?
-                        .ok_or_else(|| {
-                            anyhow::anyhow!("Cannot convert non-float constant to float")
-                        })?
-                        .iter()
-                        .map(|i| Ok((*i).try_into()?))
-                        .collect::<Result<_>>()?;
-                    Value::F64(inner)
-                }
-                Primitive::I32 => {
-                    let inner = x
-                        .as_integral(&self.context)?
-                        .ok_or_else(|| {
-                            anyhow::anyhow!("Cannot convert non-float constant to float")
-                        })?
-                        .iter()
-                        .map(|i| Ok((*i).try_into()?))
-                        .collect::<Result<_>>()?;
-                    Value::I32(inner)
-                }
-                Primitive::I64 => {
-                    let inner = x
-                        .as_integral(&self.context)?
-                        .ok_or_else(|| {
-                            anyhow::anyhow!("Cannot convert non-float constant to float")
-                        })?
-                        .iter()
-                        .map(|i| Ok((*i).try_into()?))
-                        .collect::<Result<_>>()?;
-                    Value::I64(inner)
-                }
-                Primitive::Bool => anyhow::bail!("Bool not supported yet"),
-            }
-        } else {
-            if let Some(x) = self.values.get(&vref) {
-                return Ok(x);
-            }
+    pub(crate) fn get_value_for_ref(&self, vref: ValueRef) -> Result<&Value> {
+        self.values
+            .get(&vref)
+            .ok_or_else(|| anyhow::anyhow!("Value for ref not found"))
+    }
 
-            anyhow::bail!(
-                "Unable to resolve ValueRef because it was not already set and is not a constant"
-            );
-        };
+    fn exec_one_instruction(&mut self, inst: &Instruction) -> Result<()> {
+        use waveling_dsp_ir::Instruction as Inst;
 
-        self.values.insert(vref, nval);
-        Ok(self.values.get(&vref).expect("Just inserted"))
+        use ops::*;
+
+        match inst {
+            Inst::Add {
+                output,
+                left,
+                right,
+            } => add_vref(self, *output, *left, *right)?,
+            Inst::Sub {
+                output,
+                left,
+                right,
+            } => sub_vref(self, *output, *left, *right)?,
+            Inst::Mul {
+                output,
+                left,
+                right,
+            } => mul_vref(self, *output, *left, *right)?,
+            Inst::Div {
+                output,
+                left,
+                right,
+            } => div_vref(self, *output, *left, *right)?,
+            Inst::ModPositive {
+                output,
+                input,
+                divisor,
+            } => rem_vref(self, *output, *input, *divisor)?,
+            Inst::Min {
+                output,
+                left,
+                right,
+            } => min_vref(self, *output, *left, *right)?,
+            Inst::Max {
+                output,
+                left,
+                right,
+            } => max_vref(self, *output, *left, *right)?,
+            Inst::Clamp {
+                output,
+                input,
+                lower,
+                upper,
+            } => clamp_vref(self, *output, *input, *lower, *upper)?,
+            Inst::Pow {
+                output,
+                base,
+                exponent,
+            } => pow_vref(self, *output, *base, *exponent)?,
+            Inst::FastSin { output, input } => sin_vref(self, *output, *input)?,
+            Inst::FastCos { output, input } => cos_vref(self, *output, *input)?,
+            Inst::FastTan { input, output } => tan_vref(self, *output, *input)?,
+            Inst::FastSinh { output, input } => sinh_vref(self, *output, *input)?,
+            Inst::FastCosh { output, input } => cosh_vref(self, *output, *input)?,
+            Inst::FastTanh { input, output } => tanh_vref(self, *output, *input)?,
+
+            _ => anyhow::bail!("Unsupported instruction"),
+        }
+
+        Ok(())
+    }
+
+    /// Run one block.
+    ///
+    pub fn run_block(&mut self, ctx: &Context) -> Result<()> {
+        for i in 0..ctx.get_block_size() {
+            self.block_offset = i as u64;
+
+            for inst in ctx.iter_instructions() {
+                self.exec_one_instruction(inst)?;
+            }
+        }
+
+        self.block_counter += 1;
+        Ok(())
     }
 }

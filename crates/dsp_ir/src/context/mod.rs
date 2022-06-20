@@ -124,4 +124,9 @@ impl Context {
     pub fn get_block_size(&self) -> usize {
         self.block_size
     }
+
+    /// Iterate over all instructions in execution order.
+    pub fn iter_instructions(&self) -> impl Iterator<Item = &crate::instruction::Instruction> {
+        self.program.iter().map(|x| x.get_instruction(self).expect("If this fails, context invariants were violated because contexts should only ever hold references to themselves"))
+    }
 }
