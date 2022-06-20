@@ -14,13 +14,13 @@ use generational_arena::Arena;
 use crate::constant::Constant;
 use crate::Type;
 
-#[derive(Default)]
 pub struct Context {
     constant_arena: Arena<Constant>,
     value_arena: Arena<ValueDescriptor>,
     state_arena: Arena<StateDescriptor>,
     instruction_arena: Arena<crate::Instruction>,
 
+    block_size: usize,
     inputs: Vec<crate::Type>,
     outputs: Vec<crate::Type>,
     properties: Vec<crate::Type>,
@@ -32,8 +32,27 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new() -> Context {
-        Default::default()
+    pub fn new(block_size: usize) -> Result<Context> {
+        // Block size must be a power of 2, for now.
+        if block_size == 0 {
+            anyhow::bail!("Block size may not be 0");
+        }
+
+        if block_size & (block_size - 1) != 0 {
+            anyhow::bail!("Block sizes must be a power of 2");
+        }
+
+        Ok(Context {
+            constant_arena: Default::default(),
+            value_arena: Default::default(),
+            state_arena: Default::default(),
+            instruction_arena: Default::default(),
+            block_size,
+            inputs: Default::default(),
+            outputs: Default::default(),
+            properties: Default::default(),
+            program: Default::default(),
+        })
     }
 
     /// Declare a new input and return the index.
@@ -74,7 +93,7 @@ impl Context {
         self.properties.len()
     }
 
-    pub fn iter_ooutputs(&self) -> impl Iterator<Item = (usize, &Type)> {
+    pub fn iter_outputs(&self) -> impl Iterator<Item = (usize, &Type)> {
         self.outputs.iter().enumerate()
     }
 
@@ -100,5 +119,9 @@ impl Context {
 
     pub fn iter_properties(&self) -> impl Iterator<Item = (usize, &Type)> {
         self.properties.iter().enumerate()
+    }
+
+    pub fn get_block_size(&self) -> usize {
+        self.block_size
     }
 }

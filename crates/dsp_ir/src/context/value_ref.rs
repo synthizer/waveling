@@ -23,7 +23,7 @@ use super::*;
 /// - the output from the biquad filter is (barring constant folding) an instruction output.
 /// - Reading from a buffer or global state uses a special load instruction to get from that state to an instruction
 ///   output, that is, the IR models even single variables that last longer than one program iteration as pointers.
-#[derive(Debug, Eq, Ord, PartialEq, PartialOrd, Copy, Clone)]
+#[derive(Debug, Eq, Ord, PartialEq, PartialOrd, Copy, Clone, Hash)]
 pub struct ValueRef {
     index: generational_arena::Index,
 }
