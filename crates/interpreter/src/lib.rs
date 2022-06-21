@@ -182,11 +182,11 @@ impl Interpreter {
             } => write_state_vref(self, ctx, *input, *state, *index, true)?,
             Inst::ReadTimeSamples { output } => read_time_samples_vref(self, ctx, *output)?,
             Inst::ReadTimeSeconds { output } => read_time_seconds_vref(self, ctx, *output)?,
-            Inst::ReadProperty { output, property } => {
+            Inst::ReadProperty { output, property_index: property } => {
                 read_property_vref(self, *output, *property)?
             }
-            Inst::ReadInput { output, input } => read_input_vref(self, ctx, *output, *input)?,
-            Inst::WriteOutput { input, index } => write_output_vref(self, ctx, *input, *index)?,
+            Inst::ReadInput { output, input_index: input } => read_input_vref(self, ctx, *output, *input)?,
+            Inst::WriteOutput { output_index: input, index } => write_output_vref(self, ctx, *input, *index)?,
             Inst::ToF32 { output, input } => to_f32_vref(self, *output, *input)?,
             Inst::ToF64 { output, input } => to_f64_vref(self, *output, *input)?,
         }

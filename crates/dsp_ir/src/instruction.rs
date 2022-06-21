@@ -167,12 +167,12 @@ pub enum Instruction {
     /// Read an input of the program, at the current sample index.
     ReadInput {
         output: ValueRef,
-        input: usize,
+        input_index: usize,
     },
 
     /// Write an output of the current program.
     WriteOutput {
-        input: ValueRef,
+        output_index: ValueRef,
         index: usize,
     },
 
@@ -182,6 +182,6 @@ pub enum Instruction {
     /// Currently we additionally place the constraint that properties are scalar.
     ReadProperty {
         output: ValueRef,
-        property: usize,
+        property_index: usize,
     },
 }
