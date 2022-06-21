@@ -19,17 +19,12 @@ macro_rules! op_impl {
         where
             T: $trait<Output = T> + Copy,
         {
-            $({
-            if output.len() != $first_param.len() || output.len() != $rest.len() {
-                anyhow::bail!("All arguments must be of the same length");
-            }
-        })*
-
             // We do this loop with a bit of unsafe for performance, and because it is very simple.
             unsafe {
                 for i in 0..output.len() {
-
-                        *output.get_unchecked_mut(i) = $first_param.get_unchecked(i).$method($(*$rest.get_unchecked(i)),*);
+                        *output.get_unchecked_mut(i%output.len()) =
+                            $first_param.get_unchecked(i%$first_param.len())
+                            .$method($(*$rest.get_unchecked(i%$rest.len())),*);
                 }
             }
             Ok(())
