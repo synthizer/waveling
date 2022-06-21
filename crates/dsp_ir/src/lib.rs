@@ -5,5 +5,5 @@ pub mod instruction;
 pub mod types;
 
 pub use context::{ConstantRef, Context, StateRef, ValueRef};
-pub use instruction::Instruction;
+pub use instruction::{Instruction, InstructionKind};
 pub use types::Type;

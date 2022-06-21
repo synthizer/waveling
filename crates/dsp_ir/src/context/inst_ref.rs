@@ -21,8 +21,8 @@ impl InstRef {
 }
 
 impl Context {
-    pub fn new_instruction(&mut self, inst: crate::Instruction) -> InstRef {
-        let index = self.instruction_arena.insert(inst);
+    pub fn new_instruction(&mut self, inst: crate::InstructionKind) -> InstRef {
+        let index = self.instruction_arena.insert(crate::Instruction::new(inst));
         let x = InstRef { index };
         self.program.push(x);
         x

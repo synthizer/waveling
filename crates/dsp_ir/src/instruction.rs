@@ -1,6 +1,6 @@
 use crate::context::*;
 
-/// The instruction enum.
+/// The instruction kind/arguments.
 ///
 /// The convenient interface, which also verifies that invariants hold, is the [crate::inst_builder] module.  The
 /// documentation on this enum is authoritative as to these invariants, but this enum is admittedly difficult to work
@@ -13,7 +13,7 @@ use crate::context::*;
 ///
 /// The fast trigonometric instructions are only guaranteed to be accurate  on the range `-2pi` to `2pi` inclusive.  How
 /// accurate they are is still up in the air.  They must also be executed on an f32 or f64 type.
-pub enum Instruction {
+pub enum InstructionKind {
     /// Addition.
     Add {
         output: ValueRef,
@@ -184,4 +184,18 @@ pub enum Instruction {
         output: ValueRef,
         property_index: usize,
     },
+}
+
+pub struct Instruction {
+    kind: InstructionKind,
+}
+
+impl Instruction {
+    pub(crate) fn new(kind: InstructionKind) -> Instruction {
+        Instruction { kind }
+    }
+
+    pub fn get_kind(&self) -> &InstructionKind {
+        &self.kind
+    }
 }

@@ -61,7 +61,7 @@ macro_rules! arith {
         pub fn $fn_name(ctx: &mut Context, $left: ValueRef, $right: ValueRef) -> Result<ValueRef> {
             let ty = validate_arith_and_get_ty(ctx, $left, $right)?;
             let output = ctx.new_value(ty);
-            ctx.new_instruction(Instruction::$variant {
+            ctx.new_instruction(InstructionKind::$variant {
                 output,
                 $left,
                 $right,
@@ -104,7 +104,7 @@ pub fn clamp(
         .max(ty3.get_vector_width());
     let otype = Type::new_vector(prim, width)?;
     let output = ctx.new_value(otype);
-    let inst = Instruction::Clamp {
+    let inst = InstructionKind::Clamp {
         output,
         input,
         lower,
@@ -128,7 +128,7 @@ macro_rules! conv {
                 crate::types::Primitive::$prim,
                 ty.get_vector_width(),
             )?);
-            ctx.new_instruction(Instruction::$variant { output, input });
+            ctx.new_instruction(InstructionKind::$variant { output, input });
             Ok(output)
         }
     };
@@ -153,7 +153,7 @@ macro_rules! trig {
             }
 
             let output = ctx.new_value(ty);
-            ctx.new_instruction(Instruction::$variant { output, input });
+            ctx.new_instruction(InstructionKind::$variant { output, input });
             Ok(output)
         }
     };
@@ -174,7 +174,7 @@ macro_rules! state {
             // The output type is this type, but minus the buffer part.
             let output_ty = crate::Type::new_vector(ty.get_primitive(), ty.get_vector_width())?;
             let output = ctx.new_value(output_ty);
-            ctx.new_instruction(Instruction::$variant {
+            ctx.new_instruction(InstructionKind::$variant {
                 output,
                 state,
                 index,
@@ -189,13 +189,13 @@ state!(read_state_relative, ReadStateRelative);
 
 pub fn read_time_samples(ctx: &mut Context) -> Result<ValueRef> {
     let output = ctx.new_value(crate::Type::new_vector(crate::types::Primitive::I64, 1)?);
-    ctx.new_instruction(Instruction::ReadTimeSamples { output });
+    ctx.new_instruction(InstructionKind::ReadTimeSamples { output });
     Ok(output)
 }
 
 pub fn read_time_seconds(ctx: &mut Context) -> Result<ValueRef> {
     let output = ctx.new_value(crate::Type::new_vector(crate::types::Primitive::F64, 1)?);
-    ctx.new_instruction(Instruction::ReadTimeSeconds { output });
+    ctx.new_instruction(InstructionKind::ReadTimeSeconds { output });
     Ok(output)
 }
 
@@ -204,7 +204,7 @@ pub fn read_input(ctx: &mut Context, index: usize) -> Result<ValueRef> {
         .get_input_type(index)
         .ok_or_else(|| anyhow::anyhow!("Input index {} does not exist", index))?;
     let output = ctx.new_value(ty);
-    ctx.new_instruction(Instruction::ReadInput {
+    ctx.new_instruction(InstructionKind::ReadInput {
         output,
         input_index: index,
     });
@@ -216,7 +216,10 @@ pub fn read_property(ctx: &mut Context, property: usize) -> Result<ValueRef> {
         .get_property_type(property)
         .ok_or_else(|| anyhow::anyhow!("Property index {} does not exist", property))?;
     let output = ctx.new_value(ty);
-    ctx.new_instruction(Instruction::ReadProperty { output, property_index: property });
+    ctx.new_instruction(InstructionKind::ReadProperty {
+        output,
+        property_index: property,
+    });
     Ok(output)
 }
 
@@ -233,6 +236,9 @@ pub fn write_output(ctx: &mut Context, input: ValueRef, index: usize) -> Result<
         );
     }
 
-    ctx.new_instruction(Instruction::WriteOutput { output_index: input, index });
+    ctx.new_instruction(InstructionKind::WriteOutput {
+        output_index: input,
+        index,
+    });
     Ok(())
 }
