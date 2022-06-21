@@ -64,9 +64,7 @@ macro_rules! op_vref {
 
 
             if let Some(x) = nv {
-                if interpreter.values.insert(output, x).is_some() {
-                    anyhow::bail!("Attempt to double-set a value");
-                }
+                interpreter.set_value(output, x)?;
                 return Ok(());
             }
 
@@ -281,10 +279,7 @@ pub(crate) fn read_state_vref(
         Value::I64(x) => Value::I64(SmallVec::from_slice(&x[will_read..will_read_end])),
     };
 
-    if interpreter.values.insert(output, read_val).is_some() {
-        anyhow::bail!("Attempt to double-set output value");
-    }
-
+    interpreter.set_value(output, read_val)?;
     Ok(())
 }
 
@@ -365,10 +360,7 @@ pub(crate) fn read_time_samples_vref(
 ) -> Result<()> {
     let val = Value::I64(smallvec![interpreter.get_time_in_samples(ctx) as i64]);
 
-    if interpreter.values.insert(output, val).is_some() {
-        anyhow::bail!("Attempt to double-set value");
-    }
-
+    interpreter.set_value(output, val)?;
     Ok(())
 }
 
@@ -381,10 +373,7 @@ pub(crate) fn read_time_seconds_vref(
         interpreter.get_time_in_samples(ctx) as f64 / ctx.get_sr() as f64
     ]);
 
-    if interpreter.values.insert(output, val).is_some() {
-        anyhow::bail!("Attempt to double-set value");
-    }
-
+    interpreter.set_value(output, val)?;
     Ok(())
 }
 
@@ -398,14 +387,7 @@ pub(crate) fn read_property_vref(
         .get(property)
         .ok_or_else(|| anyhow!("Property index {} out of range", property))?;
 
-    if interpreter
-        .values
-        .insert(output, Value::F64(smallvec![val]))
-        .is_some()
-    {
-        anyhow::bail!("Attempt to double-set value");
-    }
-
+    interpreter.set_value(output, Value::F64(smallvec![val]))?;
     Ok(())
 }
 
@@ -433,10 +415,7 @@ pub(crate) fn read_input_vref(
         &input_array[offset as usize..end as usize],
     ));
 
-    if interpreter.values.insert(output, val).is_some() {
-        anyhow::bail!("Attempt to double-set value");
-    }
-
+    interpreter.set_value(output, val)?;
     Ok(())
 }
 
