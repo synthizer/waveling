@@ -32,7 +32,7 @@ pub struct Interpreter {
     pub(crate) values: HashMap<ValueRef, Value>,
 
     /// Stores state between ticks.
-    pub(crate) state: HashMap<ValueRef, Value>,
+    pub(crate) state: HashMap<StateRef, Value>,
 
     block_offset: u64,
     block_counter: u64,
@@ -102,7 +102,7 @@ impl Interpreter {
             .ok_or_else(|| anyhow::anyhow!("Value for ref not found"))
     }
 
-    fn exec_one_instruction(&mut self, inst: &Instruction) -> Result<()> {
+    fn exec_one_instruction(&mut self, ctx: &Context, inst: &Instruction) -> Result<()> {
         use waveling_dsp_ir::Instruction as Inst;
 
         use ops::*;
@@ -160,25 +160,66 @@ impl Interpreter {
             Inst::FastSinh { output, input } => sinh_vref(self, *output, *input)?,
             Inst::FastCosh { output, input } => cosh_vref(self, *output, *input)?,
             Inst::FastTanh { input, output } => tanh_vref(self, *output, *input)?,
-
-            _ => anyhow::bail!("Unsupported instruction"),
+            Inst::ReadState {
+                output,
+                state,
+                index,
+            } => read_state_vref(self, ctx, *output, *state, *index, false)?,
+            Inst::WriteState {
+                input,
+                state,
+                index,
+            } => write_state_vref(self, ctx, *input, *state, *index, false)?,
+            Inst::ReadStateRelative {
+                output,
+                state,
+                index,
+            } => read_state_vref(self, ctx, *output, *state, *index, true)?,
+            Inst::WriteStateRelative {
+                input,
+                state,
+                index,
+            } => write_state_vref(self, ctx, *input, *state, *index, true)?,
+            Inst::ReadTimeSamples { output } => read_time_samples_vref(self, ctx, *output)?,
+            Inst::ReadTimeSeconds { output } => read_time_seconds_vref(self, ctx, *output)?,
+            Inst::ReadProperty { output, property } => {
+                read_property_vref(self, *output, *property)?
+            }
+            Inst::ReadInput { output, input } => read_input_vref(self, ctx, *output, *input)?,
+            Inst::WriteOutput { input, index } => write_output_vref(self, ctx, *input, *index)?,
+            Inst::ToF32 { output, input } => to_f32_vref(self, *output, *input)?,
+            Inst::ToF64 { output, input } => to_f64_vref(self, *output, *input)?,
         }
 
         Ok(())
     }
 
     /// Run one block.
-    ///
     pub fn run_block(&mut self, ctx: &Context) -> Result<()> {
         for i in 0..ctx.get_block_size() {
             self.block_offset = i as u64;
 
             for inst in ctx.iter_instructions() {
-                self.exec_one_instruction(inst)?;
+                self.exec_one_instruction(ctx, inst)?;
             }
+
+            // We clear the values on every tick because they are essentially named edges in the graph.
+            self.values.clear();
         }
 
         self.block_counter += 1;
+        Ok(())
+    }
+
+    fn get_time_in_samples(&self, ctx: &Context) -> u64 {
+        self.block_counter * ctx.get_block_size() as u64 + self.block_offset
+    }
+
+    pub(crate) fn set_value(&mut self, vref: ValueRef, value: Value) -> Result<()> {
+        if self.values.insert(vref, value).is_some() {
+            anyhow::bail!("Attempt to double.set value");
+        }
+
         Ok(())
     }
 }

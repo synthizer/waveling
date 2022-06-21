@@ -204,16 +204,19 @@ pub fn read_input(ctx: &mut Context, index: usize) -> Result<ValueRef> {
         .get_input_type(index)
         .ok_or_else(|| anyhow::anyhow!("Input index {} does not exist", index))?;
     let output = ctx.new_value(ty);
-    ctx.new_instruction(Instruction::ReadInput { output, index });
+    ctx.new_instruction(Instruction::ReadInput {
+        output,
+        input: index,
+    });
     Ok(output)
 }
 
-pub fn read_property(ctx: &mut Context, index: usize) -> Result<ValueRef> {
+pub fn read_property(ctx: &mut Context, property: usize) -> Result<ValueRef> {
     let ty = *ctx
-        .get_property_type(index)
-        .ok_or_else(|| anyhow::anyhow!("Property index {} does not exist", index))?;
+        .get_property_type(property)
+        .ok_or_else(|| anyhow::anyhow!("Property index {} does not exist", property))?;
     let output = ctx.new_value(ty);
-    ctx.new_instruction(Instruction::ReadProperty { output, index });
+    ctx.new_instruction(Instruction::ReadProperty { output, property });
     Ok(output)
 }
 

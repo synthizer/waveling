@@ -20,6 +20,7 @@ pub struct Context {
     state_arena: Arena<StateDescriptor>,
     instruction_arena: Arena<crate::Instruction>,
 
+    sr: u64,
     block_size: usize,
     inputs: Vec<crate::Type>,
     outputs: Vec<crate::Type>,
@@ -32,7 +33,7 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(block_size: usize) -> Result<Context> {
+    pub fn new(sr: u64, block_size: usize) -> Result<Context> {
         // Block size must be a power of 2, for now.
         if block_size == 0 {
             anyhow::bail!("Block size may not be 0");
@@ -47,6 +48,7 @@ impl Context {
             value_arena: Default::default(),
             state_arena: Default::default(),
             instruction_arena: Default::default(),
+            sr,
             block_size,
             inputs: Default::default(),
             outputs: Default::default(),
@@ -123,6 +125,10 @@ impl Context {
 
     pub fn get_block_size(&self) -> usize {
         self.block_size
+    }
+
+    pub fn get_sr(&self) -> u64 {
+        self.sr
     }
 
     /// Iterate over all instructions in execution order.

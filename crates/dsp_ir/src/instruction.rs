@@ -124,7 +124,7 @@ pub enum Instruction {
     ///
     /// Index should be an integral scalar.
     ///
-    /// Note that scalars are 1-length buffers, and so said index is always zero.
+    /// Note that scalars are 1-length buffers.  When emitting  index reading for scalars, use 0.
     ReadState {
         output: ValueRef,
         state: StateRef,
@@ -142,6 +142,18 @@ pub enum Instruction {
         index: ValueRef,
     },
 
+    WriteState {
+        state: StateRef,
+        input: ValueRef,
+        index: ValueRef,
+    },
+
+    WriteStateRelative {
+        state: StateRef,
+        input: ValueRef,
+        index: ValueRef,
+    },
+
     /// Read the current time, in samples.
     ReadTimeSamples {
         output: ValueRef,
@@ -155,7 +167,7 @@ pub enum Instruction {
     /// Read an input of the program, at the current sample index.
     ReadInput {
         output: ValueRef,
-        index: usize,
+        input: usize,
     },
 
     /// Write an output of the current program.
@@ -170,6 +182,6 @@ pub enum Instruction {
     /// Currently we additionally place the constraint that properties are scalar.
     ReadProperty {
         output: ValueRef,
-        index: usize,
+        property: usize,
     },
 }

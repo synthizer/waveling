@@ -3,9 +3,9 @@
 //! problem.
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
-use anyhow::Result;
-use smallvec::smallvec;
-use waveling_dsp_ir::ValueRef;
+use anyhow::{anyhow, Result};
+use smallvec::{smallvec, SmallVec};
+use waveling_dsp_ir::{Context, StateRef, ValueRef};
 
 use crate::{Interpreter, Value};
 
@@ -227,3 +227,293 @@ op_vref!(
     F32(value, lower, upper),
     F64(value, lower, upper)
 );
+
+pub(crate) fn read_state_vref(
+    interpreter: &mut Interpreter,
+    ctx: &Context,
+    output: ValueRef,
+    state: StateRef,
+    index: ValueRef,
+    is_relative: bool,
+) -> Result<()> {
+    let sval = interpreter
+        .state
+        .get(&state)
+        .ok_or_else(|| anyhow!("Attempt to read state before it was set"))?;
+
+    let index = interpreter.get_value_for_ref(index)?;
+    if index.len() != 1 {
+        anyhow::bail!("Index must be a scalar");
+    }
+
+    let index = match index {
+        Value::F32(_) | Value::F64(_) => anyhow::bail!("Index must be integral"),
+        Value::I32(i) => *i.get(0).unwrap() as i64,
+        Value::I64(i) => *i.get(0).unwrap() as i64,
+    };
+
+    let ty = state.get_type(ctx)?;
+    let stride = ty.get_vector_width();
+    let length = ty.get_buffer_length();
+
+    if length == 1 && index != 0 {
+        anyhow::bail!("Attempt to use a vector as a buffer");
+    }
+
+    let rel_off = if is_relative {
+        interpreter.get_time_in_samples(ctx)
+    } else {
+        0
+    };
+
+    let will_read = ((index.div_euclid(length.try_into()?) as u64 + rel_off) * stride) as usize;
+    let will_read_end = will_read + stride as usize;
+
+    if will_read as usize >= sval.len() || will_read_end > sval.len() {
+        // This is an invariant internal to the interpreter because of the modulus.
+        anyhow::bail!("Unable to read state because the index is out of range");
+    }
+
+    let read_val = match sval {
+        Value::F32(x) => Value::F32(SmallVec::from_slice(&x[will_read..will_read_end])),
+        Value::F64(x) => Value::F64(SmallVec::from_slice(&x[will_read..will_read_end])),
+        Value::I32(x) => Value::I32(SmallVec::from_slice(&x[will_read..will_read_end])),
+        Value::I64(x) => Value::I64(SmallVec::from_slice(&x[will_read..will_read_end])),
+    };
+
+    if interpreter.values.insert(output, read_val).is_some() {
+        anyhow::bail!("Attempt to double-set output value");
+    }
+
+    Ok(())
+}
+
+pub(crate) fn write_state_vref(
+    interpreter: &mut Interpreter,
+    ctx: &Context,
+    input: ValueRef,
+    state: StateRef,
+    index: ValueRef,
+    is_relative: bool,
+) -> Result<()> {
+    let index = interpreter.get_value_for_ref(index)?;
+    if index.len() != 1 {
+        anyhow::bail!("Index must be a scalar");
+    }
+
+    let index = match index {
+        Value::F32(_) | Value::F64(_) => anyhow::bail!("Index must be integral"),
+        Value::I32(i) => *i.get(0).unwrap() as i64,
+        Value::I64(i) => *i.get(0).unwrap() as i64,
+    };
+
+    let ty = state.get_type(ctx)?;
+    let stride = ty.get_vector_width();
+    let length = ty.get_buffer_length();
+
+    if length == 1 && index != 0 {
+        anyhow::bail!("Attempt to use a vector as a buffer");
+    }
+
+    let rel_off = if is_relative {
+        interpreter.get_time_in_samples(ctx)
+    } else {
+        0
+    };
+
+    let will_write = ((index.div_euclid(length.try_into()?) as u64 + rel_off) * stride) as usize;
+    let will_write_end = will_write + stride as usize;
+
+    let sval = interpreter
+        .state
+        .get_mut(&state)
+        .ok_or_else(|| anyhow!("Attempt to write state before it was set"))?;
+
+    let wval = interpreter
+        .values
+        .get(&input)
+        .ok_or_else(|| anyhow!("Input value not set"))?;
+
+    if will_write as usize >= sval.len() || will_write_end > sval.len() {
+        // This is an invariant internal to the interpreter because of the modulus.
+        anyhow::bail!("Unable to write state because the index is out of range");
+    }
+
+    match (sval, wval) {
+        (Value::F32(d), Value::F32(s)) => {
+            (&mut d[will_write..will_write_end]).copy_from_slice(&s[..])
+        }
+        (Value::F64(d), Value::F64(s)) => {
+            (&mut d[will_write..will_write_end]).copy_from_slice(&s[..])
+        }
+        (Value::I32(d), Value::I32(s)) => {
+            (&mut d[will_write..will_write_end]).copy_from_slice(&s[..])
+        }
+        (Value::I64(d), Value::I64(s)) => {
+            (&mut d[will_write..will_write_end]).copy_from_slice(&s[..])
+        }
+        _ => anyhow::bail!("State must be the same type as the value to write"),
+    }
+
+    Ok(())
+}
+
+pub(crate) fn read_time_samples_vref(
+    interpreter: &mut Interpreter,
+    ctx: &Context,
+    output: ValueRef,
+) -> Result<()> {
+    let val = Value::I64(smallvec![interpreter.get_time_in_samples(ctx) as i64]);
+
+    if interpreter.values.insert(output, val).is_some() {
+        anyhow::bail!("Attempt to double-set value");
+    }
+
+    Ok(())
+}
+
+pub(crate) fn read_time_seconds_vref(
+    interpreter: &mut Interpreter,
+    ctx: &Context,
+    output: ValueRef,
+) -> Result<()> {
+    let val = Value::F64(smallvec![
+        interpreter.get_time_in_samples(ctx) as f64 / ctx.get_sr() as f64
+    ]);
+
+    if interpreter.values.insert(output, val).is_some() {
+        anyhow::bail!("Attempt to double-set value");
+    }
+
+    Ok(())
+}
+
+pub(crate) fn read_property_vref(
+    interpreter: &mut Interpreter,
+    output: ValueRef,
+    property: usize,
+) -> Result<()> {
+    let val = *interpreter
+        .properties
+        .get(property)
+        .ok_or_else(|| anyhow!("Property index {} out of range", property))?;
+
+    if interpreter
+        .values
+        .insert(output, Value::F64(smallvec![val]))
+        .is_some()
+    {
+        anyhow::bail!("Attempt to double-set value");
+    }
+
+    Ok(())
+}
+
+pub(crate) fn read_input_vref(
+    interpreter: &mut Interpreter,
+    ctx: &Context,
+    output: ValueRef,
+    input: usize,
+) -> Result<()> {
+    let ity = ctx
+        .get_input_type(input)
+        .ok_or_else(|| anyhow!("Input index {} out of range", input))?;
+
+    let stride = ity.get_vector_width();
+
+    let offset = interpreter.block_offset * stride;
+    let end = offset + stride;
+
+    let input_array = interpreter
+        .inputs
+        .get(input)
+        .ok_or_else(|| anyhow!("Interpreter doesn't have an input to match {}", input))?;
+
+    let val = Value::F32(SmallVec::from_slice(
+        &input_array[offset as usize..end as usize],
+    ));
+
+    if interpreter.values.insert(output, val).is_some() {
+        anyhow::bail!("Attempt to double-set value");
+    }
+
+    Ok(())
+}
+
+pub(crate) fn write_output_vref(
+    interpreter: &mut Interpreter,
+    ctx: &Context,
+    input: ValueRef,
+    output: usize,
+) -> Result<()> {
+    let oty = ctx
+        .get_output_type(output)
+        .ok_or_else(|| anyhow!("Output index {} out of range", output))?;
+
+    let stride = oty.get_vector_width();
+
+    let o_arr = interpreter
+        .outputs
+        .get_mut(output)
+        .ok_or_else(|| anyhow!("Output {} not found in interpreter", output))?;
+
+    let val = interpreter
+        .values
+        .get(&input)
+        .ok_or_else(|| anyhow!("Input vref not yet assigned a value"))?;
+
+    match val {
+        Value::F32(x) => {
+            if x.len() != stride as usize {
+                anyhow::bail!(
+                    "Mismatch in instruction argument and output widths arg={} vs output={}",
+                    x.len(),
+                    stride
+                );
+            }
+
+            let start = (interpreter.block_offset + stride) as usize;
+            let end = start + stride as usize;
+            (&mut o_arr[start..end]).copy_from_slice(&x[..]);
+        }
+        _ => anyhow::bail!("Only f32 may be twritten to outputs"),
+    }
+
+    Ok(())
+}
+
+pub(crate) fn to_f32_vref(
+    interpreter: &mut Interpreter,
+    output: ValueRef,
+    input: ValueRef,
+) -> Result<()> {
+    let val_in = interpreter.get_value_for_ref(input)?;
+    let val_out = match val_in {
+        Value::F32(x) => Value::F32(x.clone()),
+        Value::F64(x) => Value::F32(x.iter().cloned().map(|i| i as f32).collect()),
+        Value::I32(x) => Value::F32(x.iter().cloned().map(|i| i as f32).collect()),
+        Value::I64(x) => Value::F32(x.iter().cloned().map(|i| i as f32).collect()),
+    };
+
+    interpreter.set_value(output, val_out)?;
+
+    Ok(())
+}
+
+pub(crate) fn to_f64_vref(
+    interpreter: &mut Interpreter,
+    output: ValueRef,
+    input: ValueRef,
+) -> Result<()> {
+    let val_in = interpreter.get_value_for_ref(input)?;
+    let val_out = match val_in {
+        Value::F32(x) => Value::F64(x.iter().cloned().map(|i| i as f64).collect()),
+        Value::F64(x) => Value::F64(x.clone()),
+        Value::I32(x) => Value::F64(x.iter().cloned().map(|i| i as f64).collect()),
+        Value::I64(x) => Value::F64(x.iter().cloned().map(|i| i as f64).collect()),
+    };
+
+    interpreter.set_value(output, val_out)?;
+
+    Ok(())
+}
