@@ -7,7 +7,7 @@ mod ops;
 use std::collections::HashMap;
 
 use anyhow::Result;
-use smallvec::SmallVec;
+use smallvec::{smallvec, SmallVec};
 
 use waveling_dsp_ir::types::Primitive;
 use waveling_dsp_ir::*;
@@ -46,6 +46,20 @@ impl Value {
             Self::F32(x) => x.len(),
             Self::F64(x) => x.len(),
         }
+    }
+
+    pub(crate) fn new_zero_from_ty(ty: &Type) -> Result<Value> {
+        let length = (ty.get_vector_width() * ty.get_buffer_length()) as usize;
+
+        let val = match ty.get_primitive() {
+            Primitive::F32 => Value::F32(smallvec![0.0;length]),
+            Primitive::F64 => Value::F64(smallvec![0.0;length]),
+            Primitive::I32 => Value::I32(smallvec![0;length]),
+            Primitive::I64 => Value::I64(smallvec![0;length]),
+            Primitive::Bool => anyhow::bail!("Bool isn't supported yet"),
+        };
+
+        Ok(val)
     }
 }
 
@@ -93,6 +107,13 @@ impl Interpreter {
 
             interpreter.properties.push(0.0);
         }
+
+        for (sref, state) in ctx.iter_states() {
+            interpreter
+                .state
+                .insert(sref, Value::new_zero_from_ty(state.get_type())?);
+        }
+
         Ok(interpreter)
     }
 

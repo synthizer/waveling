@@ -135,4 +135,11 @@ impl Context {
     pub fn iter_instructions(&self) -> impl Iterator<Item = &crate::instruction::Instruction> {
         self.program.iter().map(|x| x.get_instruction(self).expect("If this fails, context invariants were violated because contexts should only ever hold references to themselves"))
     }
+
+    /// Iterate over all states declared in the program in some arbitrary order.
+    pub fn iter_states(&self) -> impl Iterator<Item = (StateRef, &StateDescriptor)> {
+        self.state_arena
+            .iter()
+            .map(|x| (StateRef { index: x.0 }, x.1))
+    }
 }

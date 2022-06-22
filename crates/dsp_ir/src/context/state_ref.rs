@@ -7,12 +7,13 @@ use crate::*;
 /// program.
 #[derive(Copy, Clone, Eq, Ord, PartialEq, PartialOrd, Hash)]
 pub struct StateRef {
-    index: generational_arena::Index,
+    pub(super) index: generational_arena::Index,
 }
 
 pub struct StateDescriptor {
-    pub state_type: crate::Type,
+    state_type: crate::Type,
 }
+
 #[derive(Debug, thiserror::Error)]
 #[error("Unable to resolve state against the context arena")]
 pub struct StateResolutionFailed;
@@ -27,6 +28,11 @@ impl StateRef {
 
     pub fn get_type<'a>(&self, context: &'a Context) -> Result<&'a Type> {
         Ok(&self.resolve(context)?.state_type)
+    }
+}
+impl StateDescriptor {
+    pub fn get_type(&self) -> &crate::Type {
+        &self.state_type
     }
 }
 
