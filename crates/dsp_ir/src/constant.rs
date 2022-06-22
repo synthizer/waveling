@@ -22,7 +22,7 @@ enum ConstantInner {
     Float(SmallVec<[Decimal; 4]>),
 }
 
-#[derive(thiserror::Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum ConstantConstructionError<T> {
     #[error("Constants must not be zero width")]
     ZeroWidth,
@@ -33,7 +33,6 @@ pub enum ConstantConstructionError<T> {
 
 impl Constant {
     pub fn new_integral<T: TryInto<i64>>(
-        &self,
         iter: impl Iterator<Item = T>,
     ) -> Result<Constant, ConstantConstructionError<T::Error>>
     where
@@ -53,7 +52,6 @@ impl Constant {
     }
 
     pub fn new_float<T: TryInto<Decimal>>(
-        &self,
         iter: impl Iterator<Item = T>,
     ) -> Result<Constant, ConstantConstructionError<T::Error>>
     where

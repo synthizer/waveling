@@ -259,9 +259,13 @@ pub(crate) fn read_state_vref(
         0
     };
 
-    let will_read = ((index.div_euclid(length.try_into()?) as u64 + rel_off) * stride) as usize;
+    // The first rem_euclid makes sure we are only working with two positive numbers; the second, that the sum of the
+    // index and the offset is in range.
+    let will_read = ((index.rem_euclid(length.try_into()?) as u64 + rel_off).rem_euclid(length)
+        * stride) as usize;
     let will_read_end = will_read + stride as usize;
 
+    println!("{} {} {}", will_read, will_read_end, sval.len());
     if will_read as usize >= sval.len() || will_read_end > sval.len() {
         // This is an invariant internal to the interpreter because of the modulus.
         anyhow::bail!("Unable to read state because the index is out of range");
@@ -311,7 +315,10 @@ pub(crate) fn write_state_vref(
         0
     };
 
-    let will_write = ((index.div_euclid(length.try_into()?) as u64 + rel_off) * stride) as usize;
+    // The first rem_euclid brings the value into range and positive. The second brings our proposed read plus the
+    // offset into range.
+    let will_write = ((index.rem_euclid(length.try_into()?) as u64 + rel_off).rem_euclid(length)
+        * stride) as usize;
     let will_write_end = will_write + stride as usize;
 
     let sval = interpreter

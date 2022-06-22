@@ -31,6 +31,9 @@ pub struct Interpreter {
     /// Reset on every tick.
     pub(crate) values: HashMap<ValueRef, Value>,
 
+    /// These never change after initialization.
+    pub(crate) constant_values: HashMap<ValueRef, Value>,
+
     /// Stores state between ticks.
     pub(crate) state: HashMap<StateRef, Value>,
 
@@ -67,6 +70,7 @@ impl Interpreter {
     pub fn new(ctx: &Context) -> Result<Interpreter> {
         let mut interpreter = Interpreter {
             values: Default::default(),
+            constant_values: Default::default(),
             state: Default::default(),
 
             inputs: Default::default(),
@@ -114,12 +118,61 @@ impl Interpreter {
                 .insert(sref, Value::new_zero_from_ty(state.get_type())?);
         }
 
+        // We need to pre-resolve any constant values, because otherwise get_value_for_vref can't be const and that
+        // makes everything much more difficult than it needs to be.
+        for val in ctx.iter_values() {
+            if let Some(c) = val.get_constant(ctx)? {
+                let prim = val.get_type(ctx)?.get_primitive();
+
+                macro_rules! case {
+                    ($var: ident, $ctx: ident, $x: ident, $conv_int: expr, $conv_float: expr) => {
+                        if let Some(tmp) = $x.as_integral($ctx)? {
+                            Value::$var(tmp.iter().cloned().map($conv_int).collect())
+                        } else if let Some(tmp) = $x.as_float($ctx)? {
+                            Value::$var(tmp.iter().cloned().map($conv_float).collect())
+                        } else {
+                            anyhow::bail!("Unsupported constant type");
+                        }
+                    };
+                }
+
+                let to_insert = match prim {
+                    Primitive::F32 => {
+                        case!(F32, ctx, c, |i| i as f32, |i| i
+                            .try_into()
+                            .unwrap_or(f32::NAN))
+                    }
+                    Primitive::F64 => case!(F64, ctx, c, |i| i as f64, |i| i
+                        .try_into()
+                        .unwrap_or(f64::NAN)),
+                    Primitive::I32 => case!(I32, ctx, c, |i| i as i32, |i| i.try_into().unwrap_or(
+                        if i.is_sign_negative() {
+                            i32::MIN
+                        } else {
+                            i32::MAX
+                        }
+                    )),
+                    Primitive::I64 => case!(I64, ctx, c, |i| i as i64, |i| i.try_into().unwrap_or(
+                        if i.is_sign_negative() {
+                            i64::MIN
+                        } else {
+                            i64::MAX
+                        }
+                    )),
+                    _ => anyhow::bail!("Unsupported type"),
+                };
+
+                interpreter.constant_values.insert(val, to_insert);
+            }
+        }
+
         Ok(interpreter)
     }
 
     pub(crate) fn get_value_for_ref(&self, vref: ValueRef) -> Result<&Value> {
         self.values
             .get(&vref)
+            .or_else(|| self.constant_values.get(&vref))
             .ok_or_else(|| anyhow::anyhow!("Value for ref not found"))
     }
 

@@ -142,4 +142,8 @@ impl Context {
             .iter()
             .map(|x| (StateRef { index: x.0 }, x.1))
     }
+
+    pub fn iter_values(&'_ self) -> impl Iterator<Item = ValueRef> + '_ {
+        self.value_arena.iter().map(|x| ValueRef { index: x.0 })
+    }
 }

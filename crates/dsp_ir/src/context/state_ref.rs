@@ -5,7 +5,7 @@ use crate::*;
 
 /// A reference to a state, an in-memory locationwhich is the same between program invocations unless set by the
 /// program.
-#[derive(Copy, Clone, Eq, Ord, PartialEq, PartialOrd, Hash)]
+#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
 pub struct StateRef {
     pub(super) index: generational_arena::Index,
 }

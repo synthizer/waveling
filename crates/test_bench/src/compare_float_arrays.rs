@@ -1,6 +1,9 @@
 /// Helper macro to compare two arrays of floats, which considers NaN the same.
 ///
 /// assert_eq doesn't work because of NaN.
+///
+/// Making this a macro lets us easily see the line number of the test where it failed, which is something we can't get
+/// from a function.
 #[macro_export]
 macro_rules! assert_float_arrays_same {
     ($left: expr, $right: expr) => {

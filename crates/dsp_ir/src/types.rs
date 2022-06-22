@@ -19,6 +19,11 @@ pub enum Primitive {
     Bool,
 }
 
+impl Primitive {
+    pub fn is_integral(&self) -> bool {
+        matches!(self, Primitive::I32 | Primitive::I64)
+    }
+}
 /// Description of a type.
 #[derive(Debug, Eq, PartialEq, Copy, Clone, derive_more::Display)]
 #[display(fmt = "{}<{}, {}>", primitive, vector_width, buffer_length)]

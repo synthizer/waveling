@@ -187,6 +187,33 @@ macro_rules! state {
 state!(read_state, ReadState);
 state!(read_state_relative, ReadStateRelative);
 
+macro_rules! state_writer {
+    ($name: ident, $variant: ident) => {
+        pub fn $name(
+            ctx: &mut Context,
+            state: StateRef,
+            input: ValueRef,
+            index: ValueRef,
+        ) -> Result<()> {
+            let ty = index.get_type(ctx)?;
+            if !ty.get_primitive().is_integral() {
+                anyhow::bail!("State writing can only be done with integral indices");
+            }
+
+            let inst = InstructionKind::$variant {
+                state,
+                input,
+                index,
+            };
+            ctx.new_instruction(inst);
+            Ok(())
+        }
+    };
+}
+
+state_writer!(write_state, WriteState);
+state_writer!(write_state_relative, WriteStateRelative);
+
 pub fn read_time_samples(ctx: &mut Context) -> Result<ValueRef> {
     let output = ctx.new_value(crate::Type::new_vector(crate::types::Primitive::I64, 1)?);
     ctx.new_instruction(InstructionKind::ReadTimeSamples { output });

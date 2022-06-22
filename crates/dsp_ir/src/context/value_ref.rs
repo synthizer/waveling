@@ -25,7 +25,7 @@ use super::*;
 ///   output, that is, the IR models even single variables that last longer than one program iteration as pointers.
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd, Copy, Clone, Hash)]
 pub struct ValueRef {
-    index: generational_arena::Index,
+    pub(crate) index: generational_arena::Index,
 }
 
 // The rest of this describes internal types which are stored in the context's tables.
