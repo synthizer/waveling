@@ -229,4 +229,30 @@ impl Interpreter {
 
         Ok(())
     }
+
+    pub fn set_input(&mut self, index: usize, data: &[f32]) -> Result<()> {
+        let i_arr = self
+            .inputs
+            .get_mut(index)
+            .ok_or_else(|| anyhow::anyhow!("Input {} not found", index))?;
+
+        if i_arr.len() != data.len() {
+            anyhow::bail!(
+                "Input data is of the wrong size. Need exactly {} but got {}",
+                i_arr.len(),
+                data.len()
+            );
+        }
+
+        (&mut i_arr[..]).copy_from_slice(data);
+        Ok(())
+    }
+
+    pub fn read_output(&self, index: usize) -> Result<&[f32]> {
+        let o = self
+            .outputs
+            .get(index)
+            .ok_or_else(|| anyhow::anyhow!("Invalid output index {}", index))?;
+        Ok(o)
+    }
 }
