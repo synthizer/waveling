@@ -2,7 +2,7 @@
 //! both the Rust and the waveling side.
 use anyhow::Result;
 use paste::paste;
-use waveling_dsp_ir::inst_builder as Ib;
+use waveling_dsp_ir::inst_builder as ib;
 use waveling_dsp_ir::*;
 use waveling_interpreter::*;
 
@@ -33,10 +33,10 @@ fn test_binop_simple(
     let input2 = ctx.declare_input(Type::new_vector(Primitive::F32, i2_width as u64)?)?;
     let output = ctx.declare_output(Type::new_vector(Primitive::F32, o_width as u64)?)?;
 
-    let in1_ref = Ib::read_input(&mut ctx, input1)?;
-    let in2_ref = Ib::read_input(&mut ctx, input2)?;
+    let in1_ref = ib::read_input(&mut ctx, input1)?;
+    let in2_ref = ib::read_input(&mut ctx, input2)?;
     let res_ref = op_fact(&mut ctx, in1_ref, in2_ref)?;
-    Ib::write_output(&mut ctx, res_ref, output)?;
+    ib::write_output(&mut ctx, res_ref, output)?;
 
     let mut interpreter = Interpreter::new(&ctx)?;
 
@@ -69,7 +69,30 @@ fn test_binop_simple(
     }
 
     let got = interpreter.read_output(output)?.to_vec();
-    assert_eq!(expected, got);
+
+    // We want to do this by hand, because some programs produce NaN.  We consider NaN equal since it's the same output.
+    //
+    // This is also our opportunity to deal with infinities.
+    for (ind, (got, expected)) in got.into_iter().zip(expected.into_iter()).enumerate() {
+        // Check exact equality, which works on inf.
+        if got == expected {
+            continue;
+        }
+
+        // If both are NaN that's okay.
+        if got.is_nan() && expected.is_nan() {
+            continue;
+        }
+
+        assert!(
+            (got - expected).abs() < 1e-5,
+            "At index {}, got={} expected={}",
+            ind,
+            got,
+            expected
+        );
+    }
+
     Ok(())
 }
 
@@ -100,3 +123,47 @@ binop!(sub, sub, |a, b| a - b);
 binop!(mul, mul, |a, b| a * b);
 binop!(div, div, |a, b| a / b);
 binop!(pow, pow, |a, b| a.powf(b));
+
+// We test modulus both ways since the first test here checks that it works if the input is less than the divisor, and
+// the second one if the divisor is less than the input.
+#[test]
+fn mod_forward() -> Result<()> {
+    test_binop_simple(ib::mod_positive, |a, b| a % b, 1, 1, 1)?;
+    test_binop_simple(ib::mod_positive, |a, b| a % b, 1, 2, 2)?;
+    test_binop_simple(ib::mod_positive, |a, b| a % b, 2, 1, 2)?;
+    test_binop_simple(ib::mod_positive, |a, b| a % b, 2, 2, 2)?;
+    Ok(())
+}
+
+#[test]
+fn mod_rev() -> Result<()> {
+    test_binop_simple(
+        |ctx, a, b| ib::mod_positive(ctx, b, a),
+        |a, b| b % a,
+        1,
+        1,
+        1,
+    )?;
+    test_binop_simple(
+        |ctx, a, b| ib::mod_positive(ctx, b, a),
+        |a, b| b % a,
+        1,
+        2,
+        2,
+    )?;
+    test_binop_simple(
+        |ctx, a, b| ib::mod_positive(ctx, b, a),
+        |a, b| b % a,
+        2,
+        1,
+        2,
+    )?;
+    test_binop_simple(
+        |ctx, a, b| ib::mod_positive(ctx, b, a),
+        |a, b| b % a,
+        2,
+        2,
+        2,
+    )?;
+    Ok(())
+}
