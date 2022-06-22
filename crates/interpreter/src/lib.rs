@@ -251,7 +251,7 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn set_input(&mut self, index: usize, data: &[f32]) -> Result<()> {
+    pub fn write_input(&mut self, index: usize, data: &[f32]) -> Result<()> {
         let i_arr = self
             .inputs
             .get_mut(index)

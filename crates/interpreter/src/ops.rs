@@ -46,17 +46,12 @@ macro_rules! op_vref {
                 .get_value_for_ref($sig_params)?;
             )*
 
-            $({
-                if $sig_params.len() != $first_param.len() {
-                    anyhow::bail!("All operands must be of the same width");
-                }
-            })*
-
+            let nlen = [$($sig_params.len()),*].iter().max().cloned().unwrap();
             let mut nv = None;
             $({
                 use Value::$variant as Var;
                 if let ($(Var($param)),*) = ($($param),*) {
-                    let mut o = smallvec![Default::default(); $first_param.len()];
+                    let mut o = smallvec![Default::default(); nlen];
                     $impl(&mut o[..], $(&$param[..]),*)?;
                     nv = Some(Var(o));
                 }
@@ -451,7 +446,7 @@ pub(crate) fn write_output_vref(
                 );
             }
 
-            let start = (interpreter.block_offset + stride) as usize;
+            let start = (interpreter.block_offset * stride) as usize;
             let end = start + stride as usize;
             (&mut o_arr[start..end]).copy_from_slice(&x[..]);
         }

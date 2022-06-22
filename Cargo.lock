@@ -187,3 +187,9 @@ dependencies = [
 [[package]]
 name = "waveling_test_bench"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "paste",
+ "waveling_dsp_ir",
+ "waveling_interpreter",
+]

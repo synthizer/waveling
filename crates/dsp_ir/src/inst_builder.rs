@@ -47,9 +47,9 @@ fn validate_arith_and_get_ty(ctx: &Context, left: ValueRef, right: ValueRef) -> 
     validate_cv_pair_widths(ctx, left, right)?;
 
     let prim = ty1.get_primitive();
-    let out_with = ty1.get_vector_width().max(ty2.get_vector_width());
+    let out_width = ty1.get_vector_width().max(ty2.get_vector_width());
 
-    Type::new_vector(prim, out_with)
+    Type::new_vector(prim, out_width)
 }
 
 macro_rules! arith {
