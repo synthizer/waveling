@@ -71,29 +71,7 @@ fn test_binop_simple(
     }
 
     let got = got_outputs.pop().unwrap();
-
-    // We want to do this by hand, because some programs produce NaN.  We consider NaN equal since it's the same output.
-    //
-    // This is also our opportunity to deal with infinities.
-    for (ind, (got, expected)) in got.into_iter().zip(expected.into_iter()).enumerate() {
-        // Check exact equality, which works on inf.
-        if got == expected {
-            continue;
-        }
-
-        // If both are NaN that's okay.
-        if got.is_nan() && expected.is_nan() {
-            continue;
-        }
-
-        assert!(
-            (got - expected).abs() < 1e-5,
-            "At index {}, got={} expected={}",
-            ind,
-            got,
-            expected
-        );
-    }
+    crate::assert_float_arrays_same!(got, expected);
 
     Ok(())
 }
