@@ -4,7 +4,8 @@ use anyhow::Result;
 use paste::paste;
 use waveling_dsp_ir::inst_builder as ib;
 use waveling_dsp_ir::*;
-use waveling_interpreter::*;
+
+use crate::program_runner::run_program;
 
 /// Run a simple test against a binary operator, with a given input width.
 ///
@@ -28,18 +29,6 @@ fn test_binop_simple(
 ) -> Result<()> {
     const BLOCK_SIZE: usize = 16;
 
-    let mut ctx = Context::new(10000, BLOCK_SIZE)?;
-    let input1 = ctx.declare_input(Type::new_vector(Primitive::F32, i1_width as u64)?)?;
-    let input2 = ctx.declare_input(Type::new_vector(Primitive::F32, i2_width as u64)?)?;
-    let output = ctx.declare_output(Type::new_vector(Primitive::F32, o_width as u64)?)?;
-
-    let in1_ref = ib::read_input(&mut ctx, input1)?;
-    let in2_ref = ib::read_input(&mut ctx, input2)?;
-    let res_ref = op_fact(&mut ctx, in1_ref, in2_ref)?;
-    ib::write_output(&mut ctx, res_ref, output)?;
-
-    let mut interpreter = Interpreter::new(&ctx)?;
-
     let i1_stops_at = BLOCK_SIZE * i1_width;
     let i2_stops_at = i1_stops_at + BLOCK_SIZE * i2_width;
 
@@ -52,9 +41,22 @@ fn test_binop_simple(
         .map(|i| i as f32)
         .collect::<Vec<_>>();
 
-    interpreter.write_input(input1, &d1[..])?;
-    interpreter.write_input(input2, &d2[..])?;
-    interpreter.run_block(&ctx)?;
+    let mut got_outputs = run_program(
+        44100,
+        BLOCK_SIZE,
+        &[
+            (Type::new_vector(Primitive::F32, i1_width as u64)?, &d1[..]),
+            (Type::new_vector(Primitive::F32, i2_width as u64)?, &d2[..]),
+        ],
+        &[Type::new_vector(Primitive::F32, o_width as u64)?],
+        |ctx| {
+            let in1_ref = ib::read_input(ctx, 0)?;
+            let in2_ref = ib::read_input(ctx, 1)?;
+            let res_ref = op_fact(ctx, in1_ref, in2_ref)?;
+            ib::write_output(ctx, res_ref, 0)?;
+            Ok(())
+        },
+    )?;
 
     let mut expected = vec![];
     for b in 0..BLOCK_SIZE {
@@ -68,7 +70,7 @@ fn test_binop_simple(
         }
     }
 
-    let got = interpreter.read_output(output)?.to_vec();
+    let got = got_outputs.pop().unwrap();
 
     // We want to do this by hand, because some programs produce NaN.  We consider NaN equal since it's the same output.
     //
