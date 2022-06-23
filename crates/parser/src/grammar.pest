@@ -1,0 +1,44 @@
+WHITESPACE = _{
+    " " | "\t" | NEWLINE
+}
+
+COMMENT = _{
+    "//" ~ (!NEWLINE ~ ANY) + ~ NEWLINE
+}
+
+identifier = @{
+    ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*
+}
+
+number = @{
+    "0x" ~ ASCII_HEX_DIGIT ~ ("." ~ ASCII_HEX_DIGIT){,1}
+    | ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+){,1}
+}
+
+program_decl = {
+    "program" ~ identifier ~ ";"
+}
+
+meta_obj = {
+    "{" ~ (identifier ~ ":" ~ meta_val ~ ("," | &"}"))* ~ "}"
+}
+
+meta_array = {
+    "[" ~ (meta_val ~ ("," | &"]")) * ~ "]"
+}
+
+meta_literal = {
+    identifier | number
+}
+
+meta_val = {
+    meta_obj | meta_array | meta_literal
+}
+
+external_block = {
+    "external" ~ meta_obj
+}
+
+program = {
+    SOI ~ program_decl ~ external_block ~ EOI
+}
