@@ -15,8 +15,9 @@ number = @{
     | ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+){,1}
 }
 
-program_decl = {
-    "program" ~ identifier ~ ";"
+// Careful here: we don't want to allow `programname` only `program name`
+program_decl = ${
+    "program" ~ (WHITESPACE | COMMENT)+ ~ identifier ~ (WHITESPACE | COMMENT)* ~ ";"
 }
 
 meta_obj = {
