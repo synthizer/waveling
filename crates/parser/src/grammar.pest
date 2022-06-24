@@ -7,7 +7,7 @@ COMMENT = _{
 }
 
 identifier = @{
-    ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*
+    (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")*
 }
 
 number = @{
