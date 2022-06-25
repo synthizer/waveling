@@ -398,6 +398,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "waveling_frontend"
+version = "0.1.0"
+
+[[package]]
 name = "waveling_interpreter"
 version = "0.1.0"
 dependencies = [
