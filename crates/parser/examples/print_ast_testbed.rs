@@ -12,11 +12,17 @@ external {
         { type: f32 }
     ]
 }
+
+stage gensine(f32(1)) {
+    let wave = 2 * PI * time * SR * frequency -> sin;
+    gensine <- { wave };
+    gensine <- { wave, 5, thing: stuff+ other } -> hi;
+}
 "#;
 
 fn main() {
     match waveling_parser::parse(TEST_PROGRAM) {
-        Ok(x) => println!("{:?}", x),
+        Ok(x) => println!("{:#?}", x),
         Err(e) => println!("{:?}", e),
     }
 }

@@ -1,7 +1,12 @@
+use std::collections::HashMap;
+
+use rust_decimal::Decimal;
+
 #[derive(Debug)]
 pub struct Program {
     pub program_decl: ProgramDecl,
     pub external: External,
+    pub stages: Vec<Stage>,
 }
 /// A span in source text, which we use to track for errors.
 ///
@@ -75,6 +80,77 @@ impl<'i> From<&pest::Span<'i>> for Span {
             end_line_col,
         }
     }
+}
+
+#[derive(Debug)]
+pub struct Path {
+    pub span: Span,
+    pub segments: Vec<String>,
+}
+
+#[derive(Debug)]
+pub enum BinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+}
+
+#[derive(Debug)]
+pub struct Bundle {
+    pub span: Span,
+    pub array: Vec<Expr>,
+    pub kv: HashMap<String, Expr>,
+}
+
+#[derive(Debug)]
+pub enum ExprKind {
+    Binary(BinOp, Box<Expr>, Box<Expr>),
+    Negate(Box<Expr>),
+    Number(Decimal),
+    Path(Path),
+    Bundle(Bundle),
+}
+
+#[derive(Debug)]
+pub struct Binding {
+    pub span: Span,
+    pub name: String,
+    pub expr: Expr,
+}
+
+#[derive(Debug)]
+pub enum StatementKind {
+    Binding(Binding),
+    Expr(Expr),
+}
+
+#[derive(Debug)]
+pub struct Statement {
+    pub span: Span,
+    pub kind: StatementKind,
+}
+
+#[derive(Debug)]
+pub struct StageOutput {
+    pub span: Span,
+    pub output_type: PrimitiveTypeLit,
+    pub width: u64,
+}
+
+#[derive(Debug)]
+pub struct Stage {
+    pub span: Span,
+    pub name: String,
+    pub outputs: Vec<StageOutput>,
+    pub statements: Vec<Statement>,
+}
+
+#[derive(Debug)]
+pub struct Expr {
+    pub span: Span,
+    pub kind: ExprKind,
 }
 
 impl<'i> From<pest::Span<'i>> for Span {
