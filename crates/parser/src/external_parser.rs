@@ -3,9 +3,10 @@ use std::collections::HashMap;
 
 use pest::iterators::Pair;
 
+use waveling_diagnostics::{CompilationError, Span};
+
 use crate::ast;
 use crate::grammar::*;
-use crate::{Error, Span};
 
 #[derive(Debug)]
 enum Value {
@@ -60,54 +61,56 @@ fn parse_inner(pair: Pair<Rule>) -> Value {
 }
 
 impl Value {
-    fn get_key(&self, key: &str) -> Result<&Value, Error> {
+    fn get_key(&self, key: &str) -> Result<&Value, CompilationError> {
         let val = match self {
-            Value::Object(s, c) => c
-                .get(key)
-                .ok_or_else(|| Error::new(*s, format!("Expected to find key {}", key)))?,
+            Value::Object(s, c) => c.get(key).ok_or_else(|| {
+                CompilationError::new(*s, format!("Expected to find key {}", key))
+            })?,
             Value::Array(s, _) | Value::Literal(s, _) => {
-                return Err(Error::new(*s, "Expected an object"))
+                return Err(CompilationError::new(*s, "Expected an object"))
             }
         };
         Ok(val)
     }
 
-    fn iter_array(&self) -> Result<impl Iterator<Item = &Value>, Error> {
+    fn iter_array(&self) -> Result<impl Iterator<Item = &Value>, CompilationError> {
         let iter = match self {
             Value::Array(_, c) => c.iter(),
             Value::Object(s, _) | Value::Literal(s, _) => {
-                return Err(Error::new(*s, "Expected an array"))
+                return Err(CompilationError::new(*s, "Expected an array"))
             }
         };
 
         Ok(iter)
     }
 
-    fn get_literal_str(&self) -> Result<&str, Error> {
+    fn get_literal_str(&self) -> Result<&str, CompilationError> {
         match self {
             Value::Literal(_, v) => Ok(v),
-            Value::Array(s, _) | Value::Object(s, _) => Err(Error::new(*s, "Expected a literal")),
+            Value::Array(s, _) | Value::Object(s, _) => {
+                Err(CompilationError::new(*s, "Expected a literal"))
+            }
         }
     }
 
-    fn get_literal_u64(&self) -> Result<u64, Error> {
+    fn get_literal_u64(&self) -> Result<u64, CompilationError> {
         let lit = self.get_literal_str()?;
         lit.parse().map_err(|_| {
-            Error::new(
+            CompilationError::new(
                 self.get_span(),
                 format!("Expected an integer constant but found {}", lit),
             )
         })
     }
 
-    fn get_span(&self) -> ast::Span {
+    fn get_span(&self) -> Span {
         match self {
             Value::Array(s, _) | Value::Object(s, _) | Value::Literal(s, _) => *s,
         }
     }
 }
 
-fn parse_pin(val: &Value) -> Result<ast::MetaPinDef, Error> {
+fn parse_pin(val: &Value) -> Result<ast::MetaPinDef, CompilationError> {
     let width = val.get_key("width")?.get_literal_u64()?;
     let pin_type = ast::PrimitiveTypeLit::parse_from_str(
         &val.get_span(),
@@ -121,7 +124,7 @@ fn parse_pin(val: &Value) -> Result<ast::MetaPinDef, Error> {
 }
 
 /// Parse an array of pins under the given key.
-fn parse_pin_array(key: &str, val: &Value) -> Result<Vec<ast::MetaPinDef>, Vec<Error>> {
+fn parse_pin_array(key: &str, val: &Value) -> Result<Vec<ast::MetaPinDef>, Vec<CompilationError>> {
     let pins = val.get_key(key).map_err(|x| vec![x])?;
 
     let mut ret = vec![];
@@ -142,7 +145,7 @@ fn parse_pin_array(key: &str, val: &Value) -> Result<Vec<ast::MetaPinDef>, Vec<E
 }
 
 /// Parse a single property definition.
-fn parse_prop(val: &Value) -> Result<ast::MetaPropertyDef, Error> {
+fn parse_prop(val: &Value) -> Result<ast::MetaPropertyDef, CompilationError> {
     let property_type = ast::PrimitiveTypeLit::parse_from_str(
         &val.get_span(),
         val.get_key("type")?.get_literal_str()?,
@@ -154,7 +157,7 @@ fn parse_prop(val: &Value) -> Result<ast::MetaPropertyDef, Error> {
     })
 }
 
-fn parse_props(val: &Value) -> Result<Vec<ast::MetaPropertyDef>, Vec<Error>> {
+fn parse_props(val: &Value) -> Result<Vec<ast::MetaPropertyDef>, Vec<CompilationError>> {
     let props = val.get_key("properties").map_err(|x| vec![x])?;
 
     let mut ret = vec![];
@@ -174,7 +177,7 @@ fn parse_props(val: &Value) -> Result<Vec<ast::MetaPropertyDef>, Vec<Error>> {
     }
 }
 
-pub(crate) fn parse_external(obj: Pair<Rule>) -> Result<ast::External, Vec<Error>> {
+pub(crate) fn parse_external(obj: Pair<Rule>) -> Result<ast::External, Vec<CompilationError>> {
     let val = parse_object(obj.into_inner().next().unwrap());
 
     let mut all_errors = vec![];

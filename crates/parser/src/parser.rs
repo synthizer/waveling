@@ -2,15 +2,17 @@ use std::collections::HashMap;
 
 use pest::iterators::Pair;
 
+use waveling_diagnostics::{CompilationError, Span};
+
 use crate::ast;
 use crate::grammar::Rule;
 use crate::*;
 
 impl ast::PrimitiveTypeLit {
     pub(crate) fn parse_from_str(
-        span: &ast::Span,
+        span: &Span,
         input: &str,
-    ) -> Result<ast::PrimitiveTypeLit, Error> {
+    ) -> Result<ast::PrimitiveTypeLit, CompilationError> {
         if input == "f32" {
             Ok(ast::PrimitiveTypeLit {
                 span: *span,
@@ -32,7 +34,7 @@ impl ast::PrimitiveTypeLit {
                 kind: ast::PrimitiveTypeLitKind::I64,
             })
         } else {
-            Err(Error::new(
+            Err(CompilationError::new(
                 *span,
                 format!("{} is not a valid primitive", input),
             ))
@@ -61,7 +63,7 @@ fn parse_path(pair: Pair<Rule>) -> ast::Path {
     }
 }
 
-fn parse_bundle(pair: Pair<Rule>) -> Result<ast::Bundle, Error> {
+fn parse_bundle(pair: Pair<Rule>) -> Result<ast::Bundle, CompilationError> {
     let span = pair.as_span().into();
 
     let inner = pair.into_inner();
@@ -91,8 +93,7 @@ fn parse_bundle(pair: Pair<Rule>) -> Result<ast::Bundle, Error> {
     Ok(ast::Bundle { span, array, kv })
 }
 
-// Unimplemented for now.
-fn parse_number(pair: Pair<Rule>) -> Result<rust_decimal::Decimal, Error> {
+fn parse_number(pair: Pair<Rule>) -> Result<rust_decimal::Decimal, CompilationError> {
     let span = pair.as_span().into();
     let num = pair.as_str();
 
@@ -110,17 +111,17 @@ fn parse_number(pair: Pair<Rule>) -> Result<rust_decimal::Decimal, Error> {
     // out.
     let mut ret = if hex {
         rust_decimal::Decimal::from_str_radix(digits, 16)
-            .map_err(|_| Error::new(span, "Unable to parse decimal"))?
+            .map_err(|_| CompilationError::new(span, "Unable to parse decimal"))?
     } else {
         rust_decimal::Decimal::from_str_radix(digits, 10)
-            .map_err(|_| Error::new(span, "Unable to parse decimal"))?
+            .map_err(|_| CompilationError::new(span, "Unable to parse decimal"))?
     };
     ret.set_sign_positive(!neg);
 
     Ok(ret)
 }
 
-fn parse_expr_unary(pair: Pair<Rule>) -> Result<ast::Expr, Error> {
+fn parse_expr_unary(pair: Pair<Rule>) -> Result<ast::Expr, CompilationError> {
     let span = pair.as_span().into();
 
     // This is a unary expr, so the first pair tells us what kind of expr it is.
@@ -143,7 +144,7 @@ fn parse_expr_unary(pair: Pair<Rule>) -> Result<ast::Expr, Error> {
     Ok(ast::Expr { span, kind })
 }
 
-fn parse_expr(pair: Pair<Rule>) -> Result<ast::Expr, Error> {
+fn parse_expr(pair: Pair<Rule>) -> Result<ast::Expr, CompilationError> {
     use pest::prec_climber::{Assoc::Left, Operator, PrecClimber};
 
     let mul_div_rem = Operator::new(Rule::star, Left)
@@ -156,7 +157,7 @@ fn parse_expr(pair: Pair<Rule>) -> Result<ast::Expr, Error> {
     climber.climb(
         pair.into_inner(),
         parse_expr_unary,
-        |left, op, right| -> Result<ast::Expr, Error> {
+        |left, op, right| -> Result<ast::Expr, CompilationError> {
             // We might want to consider being smarter here and trying to merge the spans of left and right, but this is
             // good enough for now.
             let span = op.as_span().into();
@@ -180,7 +181,7 @@ fn parse_expr(pair: Pair<Rule>) -> Result<ast::Expr, Error> {
     )
 }
 
-fn parse_binding(pair: Pair<Rule>) -> Result<ast::Binding, Error> {
+fn parse_binding(pair: Pair<Rule>) -> Result<ast::Binding, CompilationError> {
     let span = pair.as_span().into();
 
     let mut inner = pair.into_inner();
@@ -190,7 +191,7 @@ fn parse_binding(pair: Pair<Rule>) -> Result<ast::Binding, Error> {
     Ok(ast::Binding { span, name, expr })
 }
 
-fn parse_statement(pair: Pair<Rule>) -> Result<ast::Statement, Error> {
+fn parse_statement(pair: Pair<Rule>) -> Result<ast::Statement, CompilationError> {
     let span = pair.as_span().into();
     let payload = pair.into_inner().next().unwrap();
     let kind = match payload.as_rule() {
@@ -206,7 +207,7 @@ fn parse_statement(pair: Pair<Rule>) -> Result<ast::Statement, Error> {
 }
 
 /// Parse a list of statements, returning either a vec of parsed statements or a vec of errors for reporting.
-pub fn parse_stage_body(pair: Pair<Rule>) -> Result<Vec<ast::Statement>, Vec<Error>> {
+pub fn parse_stage_body(pair: Pair<Rule>) -> Result<Vec<ast::Statement>, Vec<CompilationError>> {
     let mut statements = vec![];
     let mut errors = vec![];
 
@@ -224,7 +225,7 @@ pub fn parse_stage_body(pair: Pair<Rule>) -> Result<Vec<ast::Statement>, Vec<Err
     }
 }
 
-fn parse_stage_output_decl(pair: Pair<Rule>) -> Result<ast::StageOutput, Error> {
+fn parse_stage_output_decl(pair: Pair<Rule>) -> Result<ast::StageOutput, CompilationError> {
     let span = pair.as_span().into();
 
     let mut inner = pair.into_inner();
@@ -235,7 +236,7 @@ fn parse_stage_output_decl(pair: Pair<Rule>) -> Result<ast::StageOutput, Error> 
     let width = unparsed_width
         .as_str()
         .parse()
-        .map_err(|_| Error::new(span, "Expected a number"))?;
+        .map_err(|_| CompilationError::new(span, "Expected a number"))?;
 
     Ok(ast::StageOutput {
         span,
@@ -247,7 +248,7 @@ fn parse_stage_output_decl(pair: Pair<Rule>) -> Result<ast::StageOutput, Error> 
 // Returns `(name, outputs)`.
 fn parse_stage_header_outputs(
     pair: Pair<Rule>,
-) -> Result<(String, Vec<ast::StageOutput>), Vec<Error>> {
+) -> Result<(String, Vec<ast::StageOutput>), Vec<CompilationError>> {
     let mut outputs = vec![];
     let mut errors = vec![];
     let mut inner = pair.into_inner();
@@ -267,14 +268,13 @@ fn parse_stage_header_outputs(
     }
 }
 
-fn parse_stage(pair: Pair<Rule>) -> Result<ast::Stage, Vec<Error>> {
-    println!("got: {}", pair.as_str());
+fn parse_stage(pair: Pair<Rule>) -> Result<ast::Stage, Vec<CompilationError>> {
     let span = pair.as_span().into();
     let mut inner = pair.into_inner();
     let mut errors = vec![];
 
     // Skip the dummy rule at the beginning, which is introduced to handle whitespace.
-    println!("{}", inner.next().unwrap().as_str());
+    inner.next();
 
     let maybe_outputs = parse_stage_header_outputs(inner.next().unwrap());
     let maybe_statements = parse_stage_body(inner.next().unwrap());
@@ -302,11 +302,11 @@ fn parse_stage(pair: Pair<Rule>) -> Result<ast::Stage, Vec<Error>> {
     })
 }
 
-pub fn parse(input: &str) -> Result<ast::Program, Vec<Error>> {
+pub fn parse(input: &str) -> Result<ast::Program, Vec<CompilationError>> {
     use pest::Parser;
 
     let mut program_parts = crate::grammar::WavelingParser::parse(Rule::program, input)
-        .map_err(|x| vec![x.into()])?
+        .map_err(|x| vec![pest_to_diagnostic(&x)])?
         .next()
         .unwrap()
         .into_inner();

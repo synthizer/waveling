@@ -420,6 +420,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5bd2fe26506023ed7b5e1e315add59d6f584c621d037f9368fea9cfb988f368c"
 
 [[package]]
+name = "waveling_diagnostics"
+version = "0.1.0"
+dependencies = [
+ "pest",
+ "thiserror",
+]
+
+[[package]]
 name = "waveling_dsp_ir"
 version = "0.1.0"
 dependencies = [
@@ -457,6 +465,7 @@ dependencies = [
  "pest_derive",
  "rust_decimal",
  "thiserror",
+ "waveling_diagnostics",
 ]
 
 [[package]]
