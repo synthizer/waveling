@@ -43,28 +43,25 @@ impl std::fmt::Display for Error {
 
 impl From<&pest::error::Error<crate::grammar::Rule>> for Error {
     fn from(input: &pest::error::Error<crate::grammar::Rule>) -> Error {
-        let span = match input.location {
-            // This hopefully doesn't come up often, because pos doesn't easily give us line numbers.
-            pest::error::InputLocation::Pos(p) => crate::ast::Span {
-                start: p,
-                end: p,
-                start_line: 0,
-                start_line_col: 0,
-                end_line: 0,
-                end_line_col: 0,
-            },
-            pest::error::InputLocation::Span(s) => crate::ast::Span {
-                start: s.0,
-                end: s.1,
-                start_line: 0,
-                start_line_col: 0,
-                end_line: 0,
-                end_line_col: 0,
-            },
+        let (start, end) = match input.location {
+            pest::error::InputLocation::Pos(p) => (p, p),
+            pest::error::InputLocation::Span(s) => s,
+        };
+
+        let (start_line, start_line_col, end_line, end_line_col) = match input.line_col {
+            pest::error::LineColLocation::Pos((l, c)) => (l, c, l, c),
+            pest::error::LineColLocation::Span(start, end) => (start.0, start.1, end.0, end.1),
         };
 
         Error {
-            span: Some(span),
+            span: Some(crate::Span {
+                start,
+                end,
+                start_line,
+                end_line,
+                start_line_col,
+                end_line_col,
+            }),
             reason: format!("{}", input),
         }
     }
