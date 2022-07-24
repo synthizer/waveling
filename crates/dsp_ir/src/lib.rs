@@ -1,4 +1,3 @@
-pub mod constant;
 pub mod context;
 pub mod inst_builder;
 pub mod instruction;

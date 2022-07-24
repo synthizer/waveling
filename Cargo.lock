@@ -445,6 +445,7 @@ dependencies = [
  "rust_decimal",
  "smallvec",
  "thiserror",
+ "waveling_const",
 ]
 
 [[package]]
@@ -462,6 +463,7 @@ dependencies = [
  "anyhow",
  "paste",
  "smallvec",
+ "waveling_const",
  "waveling_dsp_ir",
 ]
 
@@ -482,6 +484,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "paste",
+ "smallvec",
+ "waveling_const",
  "waveling_dsp_ir",
  "waveling_interpreter",
 ]

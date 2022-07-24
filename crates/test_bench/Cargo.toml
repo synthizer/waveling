@@ -6,9 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+waveling_const = { path = "../const" }
 anyhow = { version = "1.0.58", features = ["backtrace"] }
 paste = "1.0.7"
 waveling_dsp_ir = { path = "../dsp_ir" }
 waveling_interpreter = { path = "../interpreter" }
+smallvec = "1.9.0"
 
 [features]

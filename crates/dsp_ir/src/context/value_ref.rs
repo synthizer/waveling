@@ -89,7 +89,7 @@ impl Context {
     pub fn new_value_const(
         &mut self,
         value_type: crate::types::Type,
-        constant: crate::constant::Constant,
+        constant: waveling_const::Constant,
     ) -> ValueRef {
         let nc = self.new_constant(constant);
         self.new_value_const_ref(value_type, nc)

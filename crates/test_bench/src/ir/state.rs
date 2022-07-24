@@ -1,5 +1,7 @@
 use anyhow::Result;
-use waveling_dsp_ir::constant::Constant;
+use smallvec::smallvec;
+
+use waveling_const::Constant;
 use waveling_dsp_ir::inst_builder as ib;
 use waveling_dsp_ir::*;
 
@@ -18,11 +20,11 @@ fn simple_accumulator() -> Result<()> {
         |ctx| {
             let zero = ctx.new_value_const(
                 Type::new_vector(Primitive::I32, 1)?,
-                Constant::new_integral([0].into_iter())?,
+                Constant::I64(smallvec![0]),
             );
             let one = ctx.new_value_const(
                 Type::new_vector(Primitive::I32, 1)?,
-                Constant::new_integral([1].into_iter())?,
+                Constant::I64(smallvec![1]),
             );
 
             let state = ctx.new_state(Type::new_vector(Primitive::I32, 1)?);
@@ -60,11 +62,11 @@ fn delay_line() -> Result<()> {
         |ctx| {
             let zero = ctx.new_value_const(
                 Type::new_vector(Primitive::I32, 1)?,
-                Constant::new_integral([0].into_iter())?,
+                Constant::I64(smallvec![0]),
             );
             let neg_two = ctx.new_value_const(
                 Type::new_vector(Primitive::I32, 1)?,
-                Constant::new_integral([-2].into_iter())?,
+                Constant::I64(smallvec![-2]),
             );
 
             let state = ctx.new_state(Type::new(Primitive::F32, 1, 3)?);

@@ -11,7 +11,8 @@ pub use value_ref::*;
 use anyhow::Result;
 use generational_arena::Arena;
 
-use crate::constant::Constant;
+use waveling_const::Constant;
+
 use crate::Type;
 
 pub struct Context {

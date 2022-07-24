@@ -122,43 +122,37 @@ impl Interpreter {
         // makes everything much more difficult than it needs to be.
         for val in ctx.iter_values() {
             if let Some(c) = val.get_constant(ctx)? {
+                use waveling_const::Constant::*;
+
                 let prim = val.get_type(ctx)?.get_primitive();
 
                 macro_rules! case {
-                    ($var: ident, $ctx: ident, $x: ident, $conv_int: expr, $conv_float: expr) => {
-                        if let Some(tmp) = $x.as_integral($ctx)? {
-                            Value::$var(tmp.iter().cloned().map($conv_int).collect())
-                        } else if let Some(tmp) = $x.as_float($ctx)? {
-                            Value::$var(tmp.iter().cloned().map($conv_float).collect())
-                        } else {
-                            anyhow::bail!("Unsupported constant type");
+                    ($var: ident, $ctx: ident, $x: ident, $target: ident) => {
+                        match $x.resolve(&$ctx)? {
+                            I32(ref y) => {
+                                Value::$var(y.iter().copied().map(|x| x as $target).collect())
+                            }
+                            I64(ref y) => {
+                                Value::$var(y.iter().copied().map(|i| i as $target).collect())
+                            }
+                            F32(ref y) => {
+                                Value::$var(y.iter().copied().map(|i| i as $target).collect())
+                            }
+                            F64(ref y) => {
+                                Value::$var(y.iter().copied().map(|i| i as $target).collect())
+                            }
+                            Bool(_) => anyhow::bail!("Bool is an unsupported constant type"),
                         }
                     };
                 }
 
                 let to_insert = match prim {
                     Primitive::F32 => {
-                        case!(F32, ctx, c, |i| i as f32, |i| i
-                            .try_into()
-                            .unwrap_or(f32::NAN))
+                        case!(F32, ctx, c, f32)
                     }
-                    Primitive::F64 => case!(F64, ctx, c, |i| i as f64, |i| i
-                        .try_into()
-                        .unwrap_or(f64::NAN)),
-                    Primitive::I32 => case!(I32, ctx, c, |i| i as i32, |i| i.try_into().unwrap_or(
-                        if i.is_sign_negative() {
-                            i32::MIN
-                        } else {
-                            i32::MAX
-                        }
-                    )),
-                    Primitive::I64 => case!(I64, ctx, c, |i| i as i64, |i| i.try_into().unwrap_or(
-                        if i.is_sign_negative() {
-                            i64::MIN
-                        } else {
-                            i64::MAX
-                        }
-                    )),
+                    Primitive::F64 => case!(F64, ctx, c, f64),
+                    Primitive::I32 => case!(I32, ctx, c, i32),
+                    Primitive::I64 => case!(I64, ctx, c, i64),
                     _ => anyhow::bail!("Unsupported type"),
                 };
 
