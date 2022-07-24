@@ -64,10 +64,10 @@ impl Value {
     fn get_key(&self, key: &str) -> Result<&Value, CompilationError> {
         let val = match self {
             Value::Object(s, c) => c.get(key).ok_or_else(|| {
-                CompilationError::new(*s, format!("Expected to find key {}", key))
+                CompilationError::new(Some(*s), format!("Expected to find key {}", key))
             })?,
             Value::Array(s, _) | Value::Literal(s, _) => {
-                return Err(CompilationError::new(*s, "Expected an object"))
+                return Err(CompilationError::new(Some(*s), "Expected an object"))
             }
         };
         Ok(val)
@@ -77,7 +77,7 @@ impl Value {
         let iter = match self {
             Value::Array(_, c) => c.iter(),
             Value::Object(s, _) | Value::Literal(s, _) => {
-                return Err(CompilationError::new(*s, "Expected an array"))
+                return Err(CompilationError::new(Some(*s), "Expected an array"))
             }
         };
 
@@ -88,7 +88,7 @@ impl Value {
         match self {
             Value::Literal(_, v) => Ok(v),
             Value::Array(s, _) | Value::Object(s, _) => {
-                Err(CompilationError::new(*s, "Expected a literal"))
+                Err(CompilationError::new(Some(*s), "Expected a literal"))
             }
         }
     }
@@ -97,7 +97,7 @@ impl Value {
         let lit = self.get_literal_str()?;
         lit.parse().map_err(|_| {
             CompilationError::new(
-                self.get_span(),
+                Some(self.get_span()),
                 format!("Expected an integer constant but found {}", lit),
             )
         })

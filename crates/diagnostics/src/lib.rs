@@ -21,9 +21,9 @@ pub struct CompilationError {
 }
 
 impl CompilationError {
-    pub fn new(span: Span, reason: impl AsRef<str>) -> CompilationError {
+    pub fn new(span: Option<Span>, reason: impl AsRef<str>) -> CompilationError {
         CompilationError {
-            span: Some(span),
+            span,
             reason: reason.as_ref().to_string(),
         }
     }

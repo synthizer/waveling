@@ -19,5 +19,5 @@ pub fn pest_to_diagnostic(input: &pest::error::Error<crate::grammar::Rule>) -> C
         start_line_col,
         end_line_col,
     };
-    CompilationError::new(span, &format!("{}", input))
+    CompilationError::new(Some(span), &format!("{}", input))
 }

@@ -35,7 +35,7 @@ impl ast::PrimitiveTypeLit {
             })
         } else {
             Err(CompilationError::new(
-                *span,
+                Some(*span),
                 format!("{} is not a valid primitive", input),
             ))
         }
@@ -111,10 +111,10 @@ fn parse_number(pair: Pair<Rule>) -> Result<rust_decimal::Decimal, CompilationEr
     // out.
     let mut ret = if hex {
         rust_decimal::Decimal::from_str_radix(digits, 16)
-            .map_err(|_| CompilationError::new(span, "Unable to parse decimal"))?
+            .map_err(|_| CompilationError::new(Some(span), "Unable to parse decimal"))?
     } else {
         rust_decimal::Decimal::from_str_radix(digits, 10)
-            .map_err(|_| CompilationError::new(span, "Unable to parse decimal"))?
+            .map_err(|_| CompilationError::new(Some(span), "Unable to parse decimal"))?
     };
     ret.set_sign_positive(!neg);
 
@@ -236,7 +236,7 @@ fn parse_stage_output_decl(pair: Pair<Rule>) -> Result<ast::StageOutput, Compila
     let width = unparsed_width
         .as_str()
         .parse()
-        .map_err(|_| CompilationError::new(span, "Expected a number"))?;
+        .map_err(|_| CompilationError::new(Some(span), "Expected a number"))?;
 
     Ok(ast::StageOutput {
         span,

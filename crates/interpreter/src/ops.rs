@@ -57,7 +57,6 @@ macro_rules! op_vref {
                 }
             })*
 
-
             if let Some(x) = nv {
                 interpreter.set_value(output, x)?;
                 return Ok(());
