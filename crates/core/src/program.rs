@@ -1,7 +1,7 @@
 use anyhow::Result;
 use petgraph::{prelude::*, stable_graph::DefaultIx};
 
-use crate::{Edge, Node, Op, PrimitiveType, SourceLoc, VectorDescriptor};
+use crate::{Edge, Node, Op, PrimitiveType, SourceLoc, State, VectorDescriptor};
 
 /// The type of the graph containing this program's operations.
 ///
@@ -19,6 +19,7 @@ pub struct Program {
     pub inputs: Vec<VectorDescriptor>,
     pub outputs: Vec<VectorDescriptor>,
     pub properties: Vec<PrimitiveType>,
+    pub states: Vec<State>,
     pub graph: OperationGraph,
 
     /// The start node, e.g. [Op::Start].
@@ -30,6 +31,14 @@ pub struct Program {
     ///
     /// Added on creation.  A second should never be created.
     pub final_node: OperationGraphNode,
+}
+
+macro_rules! decl_op_method {
+    ($name: ident, $op: ident) => {
+        pub fn $name(&mut self, source_loc: Option<SourceLoc>) -> Result<OperationGraphNode> {
+            Ok(self.op_node(Op::$op, None, source_loc))
+        }
+    };
 }
 
 impl Program {
@@ -52,6 +61,7 @@ impl Program {
             inputs: vec![],
             outputs: vec![],
             properties: vec![],
+            states: vec![],
             graph,
             start_node,
             final_node,
@@ -92,6 +102,31 @@ impl Program {
         Ok(self.properties.len() - 1)
     }
 
+    /// Add a state, a memory location consisting of some number of consecutive vectors.
+    ///
+    /// The width of the vector and length of the state must both be nonzero.
+    ///
+    /// Returns the index to the state.
+    pub fn add_state(
+        &mut self,
+        primitive: PrimitiveType,
+        width: u64,
+        length: u64,
+    ) -> Result<usize> {
+        if width == 0 {
+            anyhow::bail!("State vector widths must not be zero");
+        }
+
+        if length == 0 {
+            anyhow::bail!("State lengths must not be zero");
+        }
+
+        let vd = VectorDescriptor { primitive, width };
+        let st = State { length, vector: vd };
+        self.states.push(st);
+        Ok(self.states.len() - 1)
+    }
+
     /// Connect a node to the given input of another node.
     ///
     /// All nodes currently have one output only.
@@ -120,6 +155,144 @@ impl Program {
         // input.
         self.graph.add_edge(from_node, to_node, edge);
         Ok(())
+    }
+
+    fn op_node(
+        &mut self,
+        op: Op,
+        shape: Option<VectorDescriptor>,
+        source_loc: Option<SourceLoc>,
+    ) -> OperationGraphNode {
+        let n = Node {
+            op,
+            shape,
+            source_loc,
+        };
+        self.graph.add_node(n)
+    }
+
+    decl_op_method!(add_node, Add);
+    decl_op_method!(sub_node, Sub);
+    decl_op_method!(mul_node, Mul);
+    decl_op_method!(div_node, Div);
+    decl_op_method!(negate_node, Negate);
+    decl_op_method!(clock_node, Clock);
+
+    pub fn read_input_node(
+        &mut self,
+        input: usize,
+        source_loc: Option<SourceLoc>,
+    ) -> Result<OperationGraphNode> {
+        if input > self.inputs.len() {
+            anyhow::bail!(
+                "Tried to read input {}n but only {} inputs are available",
+                input,
+                self.inputs.len()
+            );
+        }
+
+        Ok(self.op_node(Op::ReadInput(input), None, source_loc))
+    }
+
+    pub fn read_property_node(
+        &mut self,
+        property: usize,
+        source_loc: Option<SourceLoc>,
+    ) -> Result<OperationGraphNode> {
+        if property > self.properties.len() {
+            anyhow::bail!(
+                "Attempt to read property {} but only {} properties are available",
+                property,
+                self.properties.len()
+            );
+        }
+
+        Ok(self.op_node(Op::ReadProperty(property), None, source_loc))
+    }
+
+    pub fn write_output_node(
+        &mut self,
+        output: usize,
+        source_loc: Option<SourceLoc>,
+    ) -> Result<OperationGraphNode> {
+        if output > self.outputs.len() {
+            anyhow::bail!(
+                "Attempt to read output {} buyt only {} outputs are available",
+                output,
+                self.outputs.len()
+            );
+        }
+
+        Ok(self.op_node(Op::WriteOutput(output), None, source_loc))
+    }
+
+    fn read_state_node_impl(
+        &mut self,
+        state: usize,
+        source_loc: Option<SourceLoc>,
+        modulus: bool,
+    ) -> Result<OperationGraphNode> {
+        if state >= self.states.len() {
+            anyhow::bail!(
+                "Only {} states available, but tried to read state {}",
+                self.states.len(),
+                state
+            );
+        }
+
+        Ok(self.op_node(Op::ReadState { state, modulus }, None, source_loc))
+    }
+
+    fn write_state_node_impl(
+        &mut self,
+        state: usize,
+        source_loc: Option<SourceLoc>,
+        modulus: bool,
+    ) -> Result<OperationGraphNode> {
+        if state >= self.states.len() {
+            anyhow::bail!(
+                "Only {} states available, but tried to write state {}",
+                self.states.len(),
+                state
+            );
+        }
+
+        Ok(self.op_node(Op::WriteState { state, modulus }, None, source_loc))
+    }
+
+    /// Read a state directly, without modulus.
+    pub fn read_state_direct_node(
+        &mut self,
+        state: usize,
+        source_loc: Option<SourceLoc>,
+    ) -> Result<OperationGraphNode> {
+        self.read_state_node_impl(state, source_loc, false)
+    }
+
+    /// Read a state, with modulus.
+    pub fn read_state_mod_node(
+        &mut self,
+        state: usize,
+        source_loc: Option<SourceLoc>,
+    ) -> Result<OperationGraphNode> {
+        self.read_state_node_impl(state, source_loc, true)
+    }
+
+    /// Write a state directly, without modulus on the location in the state.
+    pub fn write_state_direct_node(
+        &mut self,
+        state: usize,
+        source_loc: Option<SourceLoc>,
+    ) -> Result<OperationGraphNode> {
+        self.write_state_node_impl(state, source_loc, false)
+    }
+
+    pub fn cast_node(
+        &mut self,
+        to_ty: PrimitiveType,
+        source_loc: Option<SourceLoc>,
+    ) -> Result<OperationGraphNode> {
+        Ok(self.op_node(Op::Cast(to_ty), None, source_loc))
     }
 }
 
