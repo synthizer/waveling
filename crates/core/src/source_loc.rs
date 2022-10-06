@@ -2,6 +2,8 @@ use std::fmt::{Display, Formatter};
 
 use mlua::Lua;
 
+const UNKNOWN: &str = "<UNKNOWN>";
+
 /// Effectively a backtrace of where a node or edge was declared in user code.
 ///
 /// Frames are stored outermost first.
@@ -41,25 +43,25 @@ impl SourceLoc {
             if let Some(d) = l.inspect_stack(i) {
                 let source = d.source();
                 let printable_source =
-                    String::from_utf8_lossy(source.short_src.unwrap_or("<NO_SOURCE>".as_bytes()))
+                    String::from_utf8_lossy(source.short_src.unwrap_or(UNKNOWN.as_bytes()))
                         .into_owned();
                 let line = d.curr_line() as u32;
 
                 let maybe_file =
-                    String::from_utf8_lossy(source.source.unwrap_or("<UNKNOWN>".as_bytes()));
+                    String::from_utf8_lossy(source.source.unwrap_or(UNKNOWN.as_bytes()));
                 let file = if maybe_file.starts_with('@') {
                     maybe_file.strip_prefix('@').unwrap().to_string()
                 } else if maybe_file.starts_with('=') {
                     maybe_file[1..maybe_file.len().min(50)].to_string()
                 } else {
-                    "<UNKNOWN>".to_string()
+                    UNKNOWN.to_string()
                 };
 
                 let mut function =
-                    String::from_utf8_lossy(d.names().name.unwrap_or("<UNKNOWN>".as_bytes()))
+                    String::from_utf8_lossy(d.names().name.unwrap_or(UNKNOWN.as_bytes()))
                         .into_owned();
                 if function.is_empty() {
-                    function = "<UNKNOWN>".to_string();
+                    function = UNKNOWN.to_string();
                 }
 
                 frames.push(SourceFrame {
