@@ -294,6 +294,17 @@ impl Program {
     ) -> Result<OperationGraphNode> {
         Ok(self.op_node(Op::Cast(to_ty), None, source_loc))
     }
+
+    /// Get a cloned source location for a node.
+    ///
+    /// Used by the error building machinery.
+    pub fn cloned_source_loc(&self, node: OperationGraphNode) -> Option<SourceLoc> {
+        self.graph
+            .node_weight(node)
+            .expect("Should be present")
+            .source_loc
+            .clone()
+    }
 }
 
 impl Default for Program {

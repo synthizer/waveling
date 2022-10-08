@@ -7,12 +7,12 @@ const UNKNOWN: &str = "<UNKNOWN>";
 /// Effectively a backtrace of where a node or edge was declared in user code.
 ///
 /// Frames are stored outermost first.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SourceLoc {
     pub frames: Vec<SourceFrame>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SourceFrame {
     pub file: String,
     pub line: u32,
