@@ -287,6 +287,14 @@ impl Program {
         self.op_write_state_node_impl(state, source_loc, false)
     }
 
+    pub fn op_write_state_mod_node(
+        &mut self,
+        state: usize,
+        source_loc: Option<SourceLoc>,
+    ) -> Result<OperationGraphNode> {
+        self.op_write_state_node_impl(state, source_loc, true)
+    }
+
     pub fn op_cast_node(
         &mut self,
         to_ty: PrimitiveType,
