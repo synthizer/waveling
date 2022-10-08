@@ -137,7 +137,7 @@ mod tests {
     /// Run a unification against a set of types, returning the final result.
     fn run_unification(tys: &[VectorDescriptor]) -> Result<VectorDescriptor> {
         let mut prog = Program::new();
-        let fake_index = prog.add_node(None).unwrap();
+        let fake_index = prog.op_add_node(None).unwrap();
         let mut unifier = VectorUnifier::new(&prog, fake_index, tys[0])?;
         for t in tys.iter().skip(1) {
             unifier.present(&prog, fake_index, *t)?;

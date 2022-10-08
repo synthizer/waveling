@@ -171,14 +171,14 @@ impl Program {
         self.graph.add_node(n)
     }
 
-    decl_op_method!(add_node, Add);
-    decl_op_method!(sub_node, Sub);
-    decl_op_method!(mul_node, Mul);
-    decl_op_method!(div_node, Div);
-    decl_op_method!(negate_node, Negate);
-    decl_op_method!(clock_node, Clock);
+    decl_op_method!(op_add_node, Add);
+    decl_op_method!(op_sub_node, Sub);
+    decl_op_method!(op_mul_node, Mul);
+    decl_op_method!(op_div_node, Div);
+    decl_op_method!(op_negate_node, Negate);
+    decl_op_method!(op_clock_node, Clock);
 
-    pub fn read_input_node(
+    pub fn op_read_input_node(
         &mut self,
         input: usize,
         source_loc: Option<SourceLoc>,
@@ -194,7 +194,7 @@ impl Program {
         Ok(self.op_node(Op::ReadInput(input), None, source_loc))
     }
 
-    pub fn read_property_node(
+    pub fn op_read_property_node(
         &mut self,
         property: usize,
         source_loc: Option<SourceLoc>,
@@ -210,7 +210,7 @@ impl Program {
         Ok(self.op_node(Op::ReadProperty(property), None, source_loc))
     }
 
-    pub fn write_output_node(
+    pub fn op_write_output_node(
         &mut self,
         output: usize,
         source_loc: Option<SourceLoc>,
@@ -226,7 +226,7 @@ impl Program {
         Ok(self.op_node(Op::WriteOutput(output), None, source_loc))
     }
 
-    fn read_state_node_impl(
+    fn op_read_state_node_impl(
         &mut self,
         state: usize,
         source_loc: Option<SourceLoc>,
@@ -243,7 +243,7 @@ impl Program {
         Ok(self.op_node(Op::ReadState { state, modulus }, None, source_loc))
     }
 
-    fn write_state_node_impl(
+    fn op_write_state_node_impl(
         &mut self,
         state: usize,
         source_loc: Option<SourceLoc>,
@@ -261,33 +261,33 @@ impl Program {
     }
 
     /// Read a state directly, without modulus.
-    pub fn read_state_direct_node(
+    pub fn op_read_state_direct_node(
         &mut self,
         state: usize,
         source_loc: Option<SourceLoc>,
     ) -> Result<OperationGraphNode> {
-        self.read_state_node_impl(state, source_loc, false)
+        self.op_read_state_node_impl(state, source_loc, false)
     }
 
     /// Read a state, with modulus.
-    pub fn read_state_mod_node(
+    pub fn op_read_state_mod_node(
         &mut self,
         state: usize,
         source_loc: Option<SourceLoc>,
     ) -> Result<OperationGraphNode> {
-        self.read_state_node_impl(state, source_loc, true)
+        self.op_read_state_node_impl(state, source_loc, true)
     }
 
     /// Write a state directly, without modulus on the location in the state.
-    pub fn write_state_direct_node(
+    pub fn op_write_state_direct_node(
         &mut self,
         state: usize,
         source_loc: Option<SourceLoc>,
     ) -> Result<OperationGraphNode> {
-        self.write_state_node_impl(state, source_loc, false)
+        self.op_write_state_node_impl(state, source_loc, false)
     }
 
-    pub fn cast_node(
+    pub fn op_cast_node(
         &mut self,
         to_ty: PrimitiveType,
         source_loc: Option<SourceLoc>,
