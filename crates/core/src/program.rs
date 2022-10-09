@@ -1,7 +1,7 @@
 use anyhow::Result;
 use petgraph::{prelude::*, stable_graph::DefaultIx};
 
-use crate::{Edge, Node, Op, PrimitiveType, SourceLoc, State, VectorDescriptor};
+use crate::{BinOp, Edge, Node, Op, PrimitiveType, SourceLoc, State, VectorDescriptor};
 
 /// The type of the graph containing this program's operations.
 ///
@@ -33,7 +33,15 @@ pub struct Program {
     pub final_node: OperationGraphNode,
 }
 
-macro_rules! decl_op_method {
+macro_rules! decl_binop_method {
+    ($name: ident, $op: ident) => {
+        pub fn $name(&mut self, source_loc: Option<SourceLoc>) -> Result<OperationGraphNode> {
+            Ok(self.op_node(Op::BinOp(BinOp::$op), None, source_loc))
+        }
+    };
+}
+
+macro_rules! decl_simple_op_method {
     ($name: ident, $op: ident) => {
         pub fn $name(&mut self, source_loc: Option<SourceLoc>) -> Result<OperationGraphNode> {
             Ok(self.op_node(Op::$op, None, source_loc))
@@ -171,12 +179,12 @@ impl Program {
         self.graph.add_node(n)
     }
 
-    decl_op_method!(op_add_node, Add);
-    decl_op_method!(op_sub_node, Sub);
-    decl_op_method!(op_mul_node, Mul);
-    decl_op_method!(op_div_node, Div);
-    decl_op_method!(op_negate_node, Negate);
-    decl_op_method!(op_clock_node, Clock);
+    decl_binop_method!(op_add_node, Add);
+    decl_binop_method!(op_sub_node, Sub);
+    decl_binop_method!(op_mul_node, Mul);
+    decl_binop_method!(op_div_node, Div);
+    decl_simple_op_method!(op_negate_node, Negate);
+    decl_simple_op_method!(op_clock_node, Clock);
 
     pub fn op_read_input_node(
         &mut self,

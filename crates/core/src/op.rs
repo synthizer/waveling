@@ -1,16 +1,21 @@
 use crate::{Constant, PrimitiveType};
 
+/// Binary operations that we support.
+#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum BinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+}
+
 /// Kinds of operation associated with a node.
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum Op {
     Constant(Constant),
 
     Negate,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Pow,
+    BinOp(BinOp),
 
     /// Read the given input.
     ReadInput(usize),
