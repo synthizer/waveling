@@ -1,6 +1,6 @@
 #![allow(dead_code)]
-
 pub mod constant;
+pub mod data_type;
 pub mod diagnostics;
 pub mod edge;
 pub mod node;
@@ -12,6 +12,7 @@ pub mod state;
 pub mod vector_descriptor;
 
 pub use crate::constant::*;
+pub use data_type::*;
 pub use diagnostics::*;
 pub use edge::*;
 pub use node::*;

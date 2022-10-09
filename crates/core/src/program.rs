@@ -1,10 +1,7 @@
 use anyhow::Result;
 use petgraph::{prelude::*, stable_graph::DefaultIx};
 
-use crate::{
-    BinOp, DiagnosticBuilder, Edge, Node, Op, PrimitiveType, SingleErrorResult, SourceLoc, State,
-    VectorDescriptor,
-};
+use crate::*;
 
 /// The type of the graph containing this program's operations.
 ///
@@ -58,13 +55,13 @@ impl Program {
 
         let start_node = graph.add_node(Node {
             op: Op::Start,
-            shape: None,
+            data_type: None,
             source_loc: None,
         });
 
         let final_node = graph.add_node(Node {
             op: Op::Start,
-            shape: None,
+            data_type: None,
             source_loc: None,
         });
 
@@ -171,12 +168,12 @@ impl Program {
     fn op_node(
         &mut self,
         op: Op,
-        shape: Option<VectorDescriptor>,
+        data_type: Option<DataType>,
         source_loc: Option<SourceLoc>,
     ) -> OperationGraphNode {
         let n = Node {
             op,
-            shape,
+            data_type,
             source_loc,
         };
         self.graph.add_node(n)
