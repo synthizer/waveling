@@ -8,7 +8,7 @@ pub mod op;
 pub mod program;
 pub mod source_loc;
 pub mod state;
-pub mod typing;
+pub mod passes;
 pub mod vector_descriptor;
 
 pub use crate::constant::*;
@@ -19,5 +19,5 @@ pub use op::*;
 pub use program::*;
 pub use source_loc::*;
 pub use state::*;
-pub use typing::*;
+pub use passes::*;
 pub use vector_descriptor::*;
