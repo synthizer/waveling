@@ -1,5 +1,5 @@
 use crate::{
-    CompilationError, CompilationErrorBuilder, OperationGraphNode, PrimitiveType, Program,
+    Diagnostic, DiagnosticBuilder, OperationGraphNode, PrimitiveType, Program,
     SingleErrorResult as Result, VectorDescriptor,
 };
 
@@ -21,8 +21,8 @@ fn build_primitive_type_mismatch_err(
     prim1: PrimitiveType,
     node2: OperationGraphNode,
     prim2: PrimitiveType,
-) -> CompilationError {
-    let mut builder = CompilationErrorBuilder::new(
+) -> Diagnostic {
+    let mut builder = DiagnosticBuilder::new(
         format!(
             "Primitive type mismatch. Expected {} but found {}",
             prim1, prim2
@@ -46,8 +46,8 @@ fn build_broadcasting_error(
     desc1: &VectorDescriptor,
     node2: OperationGraphNode,
     desc2: &VectorDescriptor,
-) -> CompilationError {
-    let mut builder = CompilationErrorBuilder::new(
+) -> Diagnostic {
+    let mut builder = DiagnosticBuilder::new(
         format!("Unable to broadcast from {} to {}", desc1, desc2),
         None,
     );
@@ -60,8 +60,8 @@ fn build_zero_width_error(
     program: &Program,
     node: OperationGraphNode,
     desc: &VectorDescriptor,
-) -> CompilationError {
-    let mut builder = CompilationErrorBuilder::new(
+) -> Diagnostic {
+    let mut builder = DiagnosticBuilder::new(
         "Nodes which carry data must not use vectors of zero width",
         None,
     );

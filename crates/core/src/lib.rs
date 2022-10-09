@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-pub mod compilation_error;
+pub mod diagnostics;
 pub mod constant;
 pub mod edge;
 pub mod node;
@@ -12,7 +12,7 @@ pub mod passes;
 pub mod vector_descriptor;
 
 pub use crate::constant::*;
-pub use compilation_error::*;
+pub use diagnostics::*;
 pub use edge::*;
 pub use node::*;
 pub use op::*;

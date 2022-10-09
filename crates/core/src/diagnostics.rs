@@ -5,7 +5,7 @@ use indenter::indented;
 
 use crate::{OperationGraphNode, Program, SourceLoc};
 
-/// A compilation error.
+/// A compilation diagnostic.
 ///
 /// Consists of:
 ///
@@ -13,37 +13,43 @@ use crate::{OperationGraphNode, Program, SourceLoc};
 /// - A possible source location for the overall error, when it happens early enough that that makes sense.
 /// - References to nodes with descriptions of what's wrong.
 ///
-/// Should be created through [ErrorBuilder].
-/// program is undefined behavior and in particular the node references will point at the wrong things.
+/// Should be created through [DiagnosticBuilder].
 #[derive(Debug)]
-pub struct CompilationError {
+pub struct Diagnostic {
     pub message: Cow<'static, str>,
-    pub node_refs: Vec<CompilationErrorNodeRef>,
+    pub node_refs: Vec<DiagnosticNodeRef>,
     pub source_loc: Option<SourceLoc>,
 }
 
+/// A reference to a node involved in a diagnostic.
 #[derive(Debug)]
-pub struct CompilationErrorNodeRef {
+pub struct DiagnosticNodeRef {
     pub reason: Cow<'static, str>,
     pub node: OperationGraphNode,
     pub source_loc: Option<SourceLoc>,
 }
 
 /// Helper type for things which return a single error as a result.
-pub type SingleErrorResult<T> = Result<T, CompilationError>;
+pub type SingleErrorResult<T> = Result<T, Diagnostic>;
 
-/// Build [CompilationError]s.
+/// Build [CompilationDiagnostic]s.
 ///
 /// The pattern here is `ErrorBuilder::new(message).add_ref(reason, node, ...)...build(program)`.
 #[derive(Debug)]
-pub struct CompilationErrorBuilder {
-    error: CompilationError,
+pub struct DiagnosticBuilder {
+    diagnostic: Diagnostic,
 }
 
-impl CompilationErrorBuilder {
+/// A collection of diagnostics, for eventual display to the user.
+#[derive(Debug, Default)]
+pub struct DiagnosticCollection {
+    pub errors: Vec<Diagnostic>,
+}
+
+impl DiagnosticBuilder {
     pub fn new(message: impl Into<Cow<'static, str>>, source_loc: Option<SourceLoc>) -> Self {
         Self {
-            error: CompilationError {
+            diagnostic: Diagnostic {
                 message: message.into(),
                 node_refs: vec![],
                 source_loc,
@@ -52,23 +58,23 @@ impl CompilationErrorBuilder {
     }
 
     pub fn node_ref(&mut self, reason: impl Into<Cow<'static, str>>, node: OperationGraphNode) {
-        self.error.node_refs.push(CompilationErrorNodeRef {
+        self.diagnostic.node_refs.push(DiagnosticNodeRef {
             reason: reason.into(),
             node,
             source_loc: None,
         });
     }
 
-    pub fn build(mut self, program: &Program) -> CompilationError {
-        for r in self.error.node_refs.iter_mut() {
+    pub fn build(mut self, program: &Program) -> Diagnostic {
+        for r in self.diagnostic.node_refs.iter_mut() {
             r.source_loc = program.cloned_source_loc(r.node);
         }
 
-        self.error
+        self.diagnostic
     }
 }
 
-impl Display for CompilationError {
+impl Display for Diagnostic {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         use std::fmt::Write;
 
@@ -86,6 +92,29 @@ impl Display for CompilationError {
                 writeln!(formatter, "at:")?;
                 write!(indented(formatter).ind(2), "{}", loc)?;
             }
+        }
+
+        Ok(())
+    }
+}
+
+impl DiagnosticCollection {
+    pub fn new() -> Self {
+        Default::default()
+    }
+}
+
+impl Display for DiagnosticCollection {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut first = false;
+        for e in self.errors.iter() {
+            if first {
+                first = false;
+            } else {
+                writeln!(f)?;
+            }
+
+            write!(f, "{}", e)?;
         }
 
         Ok(())
