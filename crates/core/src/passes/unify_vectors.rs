@@ -8,11 +8,14 @@ use crate::{
 /// This inverted interface eases testing.  Given a set of input nodes, compute a final type, or error out.
 ///
 /// For now, we ensure correctness by forcing constructors to pass an initial node/type pairing in.
-pub struct VectorUnifier {
+pub struct VectorUnifier<'a> {
     descriptor: VectorDescriptor,
 
     /// Helps build error reports.
     last_node: OperationGraphNode,
+
+    /// Denied primitives, if any.
+    denied_primitives: Option<&'a [PrimitiveType]>,
 }
 
 fn build_primitive_type_mismatch_err(
@@ -69,21 +72,47 @@ fn build_zero_width_error(
     builder.build(program)
 }
 
-impl VectorUnifier {
+fn validate_primitive(
+    prog: &Program,
+    node: OperationGraphNode,
+    prim: PrimitiveType,
+    denied_primitives: Option<&[PrimitiveType]>,
+) -> Result<()> {
+    match denied_primitives {
+        None => Ok(()),
+        Some(s) if !s.contains(&prim) => Ok(()),
+        _ => {
+            let mut builder = DiagnosticBuilder::new(
+                format!("Unsupported primitive type {} for node", prim),
+                None,
+            );
+            builder.node_ref("This is the node of the disallowed type", node);
+            Err(builder.build(prog))
+        }
+    }
+}
+
+impl<'a> VectorUnifier<'a> {
     pub fn new(
         program: &Program,
         node: OperationGraphNode,
         descriptor: VectorDescriptor,
+        denied_primitives: Option<&'a [PrimitiveType]>,
     ) -> Result<Self> {
+        validate_primitive(program, node, descriptor.primitive, denied_primitives)?;
+
         assert!(program.graph.node_weight(node).is_some());
 
         if descriptor.width == 0 {
             return Err(build_zero_width_error(program, node, &descriptor));
         }
-        Ok(Self {
+        let ret = Self {
             last_node: node,
             descriptor,
-        })
+            denied_primitives,
+        };
+
+        Ok(ret)
     }
 
     pub fn present(
@@ -92,6 +121,8 @@ impl VectorUnifier {
         node: OperationGraphNode,
         descriptor: VectorDescriptor,
     ) -> Result<()> {
+        validate_primitive(program, node, descriptor.primitive, self.denied_primitives)?;
+
         if self.descriptor.primitive != descriptor.primitive {
             return Err(build_primitive_type_mismatch_err(
                 program,
@@ -135,10 +166,13 @@ mod tests {
     pub use super::*;
 
     /// Run a unification against a set of types, returning the final result.
-    fn run_unification(tys: &[VectorDescriptor]) -> Result<VectorDescriptor> {
+    fn run_unification(
+        tys: &[VectorDescriptor],
+        denied_tys: Option<&'static [PrimitiveType]>,
+    ) -> Result<VectorDescriptor> {
         let mut prog = Program::new();
         let fake_index = prog.op_add_node(None).unwrap();
-        let mut unifier = VectorUnifier::new(&prog, fake_index, tys[0])?;
+        let mut unifier = VectorUnifier::new(&prog, fake_index, tys[0], denied_tys)?;
         for t in tys.iter().skip(1) {
             unifier.present(&prog, fake_index, *t)?;
         }
@@ -147,46 +181,73 @@ mod tests {
     }
 
     #[test]
-    fn test_unify_vectors() {
+    fn test_no_primitive_denial() {
         use VectorDescriptor as VD;
 
         // OK: only one descriptor.
         assert_eq!(
-            run_unification(&[VD::new_bool(1)]).unwrap(),
+            run_unification(&[VD::new_bool(1)], None).unwrap(),
             VD::new_bool(1)
         );
 
         // Ok: all are the same width and type.
         assert_eq!(
-            run_unification(&[VD::new_i64(3), VD::new_i64(3), VD::new_i64(3)]).unwrap(),
+            run_unification(&[VD::new_i64(3), VD::new_i64(3), VD::new_i64(3)], None).unwrap(),
             VD::new_i64(3)
         );
 
         // Constants can broadcast out.
         assert_eq!(
-            run_unification(&[VD::new_f32(1), VD::new_f32(4)]).unwrap(),
+            run_unification(&[VD::new_f32(1), VD::new_f32(4)], None).unwrap(),
             VD::new_f32(4)
         );
         assert_eq!(
-            run_unification(&[VD::new_f32(4), VD::new_f32(1)]).unwrap(),
+            run_unification(&[VD::new_f32(4), VD::new_f32(1)], None).unwrap(),
             VD::new_f32(4)
         );
         assert_eq!(
-            run_unification(&[
-                VD::new_f32(1),
-                VD::new_f32(4),
-                VD::new_f32(1),
-                VD::new_f32(4)
-            ])
+            run_unification(
+                &[
+                    VD::new_f32(1),
+                    VD::new_f32(4),
+                    VD::new_f32(1),
+                    VD::new_f32(4)
+                ],
+                None
+            )
             .unwrap(),
             VD::new_f32(4)
         );
 
         // Zero-width vectors always fail out.
-        assert!(run_unification(&[VD::new_f32(0), VD::new_f32(4)]).is_err());
-        assert!(run_unification(&[VD::new_f32(1), VD::new_f32(0)]).is_err());
+        assert!(run_unification(&[VD::new_f32(0), VD::new_f32(4)], None).is_err());
+        assert!(run_unification(&[VD::new_f32(1), VD::new_f32(0)], None).is_err());
 
         // Changing the primitive must also fail.
-        assert!(run_unification(&[VD::new_f32(1), VD::new_f64(1)]).is_err());
+        assert!(run_unification(&[VD::new_f32(1), VD::new_f64(1)], None).is_err());
+    }
+
+    #[test]
+    fn test_denying_primitives() {
+        use PrimitiveType::*;
+        use VectorDescriptor as VD;
+
+        // Denying a primitive that isn't in the list of types is fine.
+        assert!(run_unification(&[VD::new_f32(5), VD::new_f32(5)], Some(&[I64])).is_ok());
+
+        // We want to check denial in both positions, because we actually add the check in two places.
+        //
+        // We can furthermore use the fact that we have a substring in the error we generate to verify we got the right
+        // error.
+        for tys in [
+            [VD::new_f32(5), VD::new_i64(5)],
+            [VD::new_i64(5), VD::new_f32(5)],
+        ] {
+            assert!(run_unification(&tys[..], Some(&[I64]))
+                .err()
+                .unwrap()
+                .to_string()
+                .contains("Unsupported primitive"));
+        }
     }
 }
