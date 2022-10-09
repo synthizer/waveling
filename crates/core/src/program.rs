@@ -1,7 +1,10 @@
 use anyhow::Result;
 use petgraph::{prelude::*, stable_graph::DefaultIx};
 
-use crate::{BinOp, Edge, Node, Op, PrimitiveType, SourceLoc, State, VectorDescriptor};
+use crate::{
+    BinOp, DiagnosticBuilder, Edge, Node, Op, PrimitiveType, SingleErrorResult, SourceLoc, State,
+    VectorDescriptor,
+};
 
 /// The type of the graph containing this program's operations.
 ///
@@ -320,6 +323,15 @@ impl Program {
             .expect("Should be present")
             .source_loc
             .clone()
+    }
+
+    /// get a topological sort of the graph, or return a diagnostic if there's a cycle.
+    pub fn topological_sort(&self) -> SingleErrorResult<Vec<OperationGraphNode>> {
+        petgraph::algo::toposort(&self.graph, None).map_err(|e| {
+            let mut builder = DiagnosticBuilder::new("This graph has a cycle", None);
+            builder.node_ref("This is an example node in the cycle", e.node_id());
+            builder.build(self)
+        })
     }
 }
 
