@@ -76,6 +76,22 @@ pub enum Op {
     Final,
 }
 
+/// What kind of implicit edges does this operation have?
+///
+/// This is used to feed setup of the edges from the start and final nodes rather than having logic scattered all over;
+/// declarative is easier to reason about.
+#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash, derive_more::IsVariant)]
+pub enum ImplicitEdgeKind {
+    /// All edges for this node must be declared b the user.
+    NoImplicitEdges,
+
+    /// This node implicitly conects to the start node.
+    Start,
+
+    /// This node implicitly connecs to the final node.
+    Final,
+}
+
 /// A descriptor for an operation, which describes the inputs and outputs for the type checker and opptimization passes.
 #[derive(Clone, Debug)]
 pub struct OpDescriptor {
@@ -83,6 +99,8 @@ pub struct OpDescriptor {
     ///
     /// If so, then `a op b == b op a`.  We use a relaxed model that assumes fp ops are commutative.
     pub commutative: bool,
+
+    pub implicit_edges: ImplicitEdgeKind,
 
     pub inputs: Cow<'static, [InputDescriptor]>,
 }
@@ -114,6 +132,7 @@ pub struct InputDescriptor {
 fn binop_to_descriptor(o: BinOp) -> OpDescriptor {
     OpDescriptor {
         commutative: [BinOp::Add, BinOp::Mul].contains(&o),
+        implicit_edges: ImplicitEdgeKind::NoImplicitEdges,
         inputs: Cow::Borrowed(&[InputDescriptor {
             input_kind: InputKind::Data,
             denied_primitives: Some(Cow::Borrowed(&[PrimitiveType::Bool])),
@@ -124,20 +143,30 @@ fn binop_to_descriptor(o: BinOp) -> OpDescriptor {
 impl Op {
     pub fn get_descriptor(&self) -> Cow<'static, OpDescriptor> {
         match *self {
-            // All of our boring ones with no inputs.
-            Op::Start
-            | Op::ReadInput(_)
+            Op::Start => Cow::Borrowed(&OpDescriptor {
+                commutative: false,
+                // This is the start node, which doesn't get edges to itself.
+                implicit_edges: ImplicitEdgeKind::NoImplicitEdges,
+                inputs: Cow::Borrowed(&[]),
+            }),
+            // these must have a connection from the start node.
+            Op::ReadInput(_)
             | Op::ReadProperty(_)
             | Op::Constant(_)
             | Op::ReadState { .. }
             | Op::Clock
             | Op::Sr => Cow::Borrowed(&OpDescriptor {
                 commutative: false,
-                inputs: Cow::Borrowed(&[]),
+                implicit_edges: ImplicitEdgeKind::Start,
+                inputs: Cow::Borrowed(&[InputDescriptor {
+                    input_kind: InputKind::PureDependency,
+                    denied_primitives: None,
+                }]),
             }),
             Op::BinOp(o) => Cow::Owned(binop_to_descriptor(o)),
             Op::Negate => Cow::Owned(OpDescriptor {
                 commutative: false,
+                implicit_edges: ImplicitEdgeKind::NoImplicitEdges,
                 inputs: Cow::Borrowed(&[InputDescriptor {
                     input_kind: InputKind::Data,
                     denied_primitives: Some(Cow::Borrowed(&[PrimitiveType::Bool])),
@@ -146,6 +175,7 @@ impl Op {
             // The difference from Negate is that cast allows all inputs.
             Op::Cast(_) => Cow::Borrowed(&OpDescriptor {
                 commutative: false,
+                implicit_edges: ImplicitEdgeKind::NoImplicitEdges,
                 inputs: Cow::Borrowed(&[InputDescriptor {
                     input_kind: InputKind::Data,
                     denied_primitives: None,
@@ -153,14 +183,17 @@ impl Op {
             }),
             Op::WriteOutput { .. } | Op::WriteState { .. } => Cow::Borrowed(&OpDescriptor {
                 commutative: false,
+                implicit_edges: ImplicitEdgeKind::Final,
                 inputs: Cow::Borrowed(&[InputDescriptor {
                     input_kind: InputKind::Data,
                     denied_primitives: None,
                 }]),
             }),
-            // Difference here is that final inputs are pure dependerncies.
+            // Difference here is that final inputs are pure dependerncies, and of course it doesn't have edges to
+            // itself.
             Op::Final => Cow::Borrowed(&OpDescriptor {
                 commutative: false,
+                implicit_edges: ImplicitEdgeKind::NoImplicitEdges,
                 inputs: Cow::Borrowed(&[InputDescriptor {
                     input_kind: InputKind::PureDependency,
                     denied_primitives: None,

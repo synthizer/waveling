@@ -7,8 +7,9 @@ use crate::*;
 ///
 /// This is a directed graph where edges point from their outputs to their inputs, e.g. `read input -> some math ->
 /// write output`.
-pub type OperationGraph = DiGraph<Node, Edge>;
+pub type OperationGraph = StableDiGraph<Node, Edge>;
 pub type OperationGraphNode = NodeIndex<DefaultIx>;
+pub type OperationGraphEdgeRef<'a> = petgraph::stable_graph::EdgeReference<'a, Edge>;
 
 /// The program represents a graph defining an audio effect, and its surrounding environment.
 ///

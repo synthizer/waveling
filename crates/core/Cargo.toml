@@ -12,3 +12,6 @@ indenter = { version = "0.3.3", features = ["std"] }
 mlua = { version = "0.8.3", features = ["lua54", "vendored"] }
 petgraph = "0.6.2"
 strum = { version = "0.24.1", features = ["derive"] }
+thiserror = "1.0.37"
+
+[features]

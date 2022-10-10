@@ -102,6 +102,10 @@ impl DiagnosticCollection {
     pub fn new() -> Self {
         Default::default()
     }
+
+    pub fn add_diagnostic(&mut self, diag: Diagnostic) {
+        self.errors.push(diag);
+    }
 }
 
 impl Display for DiagnosticCollection {
