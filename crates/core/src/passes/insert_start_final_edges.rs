@@ -14,7 +14,7 @@ pub struct InsertStartFinalEdgesError;
 /// declarative is easier to reason about.
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash, derive_more::IsVariant)]
 enum ImplicitEdgeKind {
-    /// All edges for this node must be declared b the user.
+    /// All edges for this node must be declared by the user.
     None,
 
     /// This node implicitly conects to the start node.
@@ -147,4 +147,93 @@ pub fn insert_start_final_edges(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_implicit_edges() {
+        use itertools::Itertools;
+
+        let mut program = Program::new();
+        let input_index = program.add_input(PrimitiveType::F32, 3).unwrap();
+        let output_index = program.add_output(PrimitiveType::F32, 3).unwrap();
+        let prop_index = program.add_property(PrimitiveType::F32).unwrap();
+        let state_index = program.add_state(PrimitiveType::F32, 3, 10).unwrap();
+
+        // These nodes should have an edge from the start node.  Put them in an array, then reduce that array into an
+        // add node, then connect that add node to the ones that should have an edge to the final node.
+        let starts = vec![
+            program.op_read_input_node(input_index, None).unwrap(),
+            program
+                .op_constant_node(Constant::F32(vec![0.0, 0.0, 0.0]), None)
+                .unwrap(),
+            program.op_clock_node(None).unwrap(),
+            program.op_sr_node(None).unwrap(),
+            program.op_read_property_node(prop_index, None).unwrap(),
+        ];
+
+        let mut adds = vec![];
+        let final_add = starts
+            .iter()
+            .cloned()
+            .tree_fold1(|a, b| {
+                let add = program.op_add_node(None).unwrap();
+                program.connect(a, add, 0, None).unwrap();
+                program.connect(b, add, 1, None).unwrap();
+                adds.push(add);
+                add
+            })
+            .unwrap();
+
+        let ends = vec![
+            program
+                .op_write_state_direct_node(state_index, None)
+                .unwrap(),
+            program.op_write_output_node(output_index, None).unwrap(),
+        ];
+
+        for n in ends.iter().cloned() {
+            program.connect(final_add, n, 0, None).unwrap();
+        }
+
+        insert_start_final_edges(&mut program, &mut DiagnosticCollection::new()).unwrap();
+
+        let gv = program.graphvis();
+
+        // All of the start nodes should have an incoming edge from the initial node, and no edges to the final node.
+        for n in starts.iter().cloned() {
+            assert!(program.graph.contains_edge(program.start_node, n), "{}", gv);
+            assert!(
+                !program.graph.contains_edge(n, program.final_node),
+                "{}",
+                gv
+            );
+        }
+
+        // The adds should never go to either.
+        for n in adds.iter().cloned() {
+            assert!(
+                !program.graph.contains_edge(program.start_node, n),
+                "{}",
+                gv
+            );
+            assert!(
+                !program.graph.contains_edge(n, program.final_node),
+                "{}",
+                gv
+            );
+        }
+
+        // And the final nodes never to the starts.
+        for n in starts.iter().cloned() {
+            assert!(
+                !program.graph.contains_edge(program.final_node, n),
+                "{}",
+                gv
+            );
+        }
+    }
 }

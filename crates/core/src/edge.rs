@@ -1,6 +1,7 @@
 use crate::SourceLoc;
 
-#[derive(Debug)]
+#[derive(Debug, derive_more::Display)]
+#[display(fmt = "To input {input}")]
 pub struct Edge {
     /// Which input does this edge connect to?
     ///

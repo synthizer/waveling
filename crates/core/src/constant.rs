@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{PrimitiveType, VectorDescriptor};
 
 /// A vector constant.
@@ -35,5 +37,20 @@ impl Constant {
             primitive: self.primitive_type(),
             width: self.width(),
         }
+    }
+}
+
+impl Display for Constant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use itertools::Itertools;
+
+        let (ty, inner) = match self {
+            Constant::Bool(x) => ("bool", x.iter().join(", ")),
+            Constant::F32(x) => ("f32", x.iter().join(", ")),
+            Constant::F64(x) => ("f64", x.iter().join(", ")),
+            Constant::I64(x) => ("i64", x.iter().join(", ")),
+        };
+
+        write!(f, "{}<{}>", ty, inner)
     }
 }

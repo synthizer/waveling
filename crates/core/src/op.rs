@@ -3,17 +3,27 @@ use std::borrow::Cow;
 use crate::{Constant, PrimitiveType};
 
 /// Binary operations that we support.
-#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd, derive_more::IsVariant)]
+#[derive(
+    Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd, derive_more::Display, derive_more::IsVariant,
+)]
 pub enum BinOp {
+    #[display(fmt = "+")]
     Add,
+
+    #[display(fmt=:"-")]
     Sub,
+
+    #[display(fmt = "*")]
     Mul,
+
+    #[display(fmt = "/")]
     Div,
 }
 
 /// Kinds of operation associated with a node.
-#[derive(Clone, Debug, PartialEq, PartialOrd, derive_more::IsVariant)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, derive_more::Display, derive_more::IsVariant)]
 pub enum Op {
+    #[display(fmt = "const({_0})")]
     Constant(Constant),
 
     Negate,
@@ -21,19 +31,23 @@ pub enum Op {
     BinOp(BinOp),
 
     /// Read the given input.
+    #[display(fmt = "ReadInput({_0})")]
     ReadInput(usize),
 
     /// Write the given output.
+    #[display(fmt = "WriteOutput({_0})")]
     WriteOutput(usize),
 
     /// Read a property.
+    #[display(fmt = "ReadProperty({_0})")]
     ReadProperty(usize),
 
-    /// Write to a given state.
+    /// Read a given state.
     ///
-    /// The input is the value to write.
+    /// The input is the index to read from.
     ///
     /// The location must be an integral type.
+    #[display(fmt = "Read({state} mod={modulus})")]
     ReadState {
         state: usize,
 
@@ -44,6 +58,7 @@ pub enum Op {
     /// Write to a state.
     ///
     /// The 0th input is the value to write and the 1st input the location.
+    #[display(fmt = "WriteState({state}, mod={modulus})")]
     WriteState {
         state: usize,
 

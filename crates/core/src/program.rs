@@ -61,7 +61,7 @@ impl Program {
         });
 
         let final_node = graph.add_node(Node {
-            op: Op::Start,
+            op: Op::Final,
             data_type: None,
             source_loc: None,
         });
@@ -186,6 +186,7 @@ impl Program {
     decl_binop_method!(op_div_node, Div);
     decl_simple_op_method!(op_negate_node, Negate);
     decl_simple_op_method!(op_clock_node, Clock);
+    decl_simple_op_method!(op_sr_node, Sr);
 
     pub fn op_read_input_node(
         &mut self,
@@ -312,6 +313,14 @@ impl Program {
         Ok(self.op_node(Op::Cast(to_ty), None, source_loc))
     }
 
+    pub fn op_constant_node(
+        &mut self,
+        constant: Constant,
+        source_loc: Option<SourceLoc>,
+    ) -> Result<OperationGraphNode> {
+        Ok(self.op_node(Op::Constant(constant), None, source_loc))
+    }
+
     /// Get a cloned source location for a node.
     ///
     /// Used by the error building machinery.
@@ -330,6 +339,11 @@ impl Program {
             builder.node_ref("This is an example node in the cycle", e.node_id());
             builder.build(self)
         })
+    }
+
+    /// Build a graphvis string for debugging purposes.
+    pub fn graphvis(&self) -> String {
+        petgraph::dot::Dot::new(&self.graph).to_string()
     }
 }
 
