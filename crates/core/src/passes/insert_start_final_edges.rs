@@ -8,6 +8,32 @@ use crate::*;
 )]
 pub struct InsertStartFinalEdgesError;
 
+/// What kind of implicit edges does this operation have?
+///
+/// This is used to feed setup of the edges from the start and final nodes rather than having logic scattered all over;
+/// declarative is easier to reason about.
+#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash, derive_more::IsVariant)]
+enum ImplicitEdgeKind {
+    /// All edges for this node must be declared b the user.
+    None,
+
+    /// This node implicitly conects to the start node.
+    Start,
+
+    /// This node implicitly connecs to the final node.
+    Final,
+}
+
+fn implicit_edge_kind(o: &Op) -> ImplicitEdgeKind {
+    use self::ImplicitEdgeKind::*;
+    match o {
+        Op::Start | Op::Final => None,
+        Op::ReadInput(_) | Op::Clock | Op::Sr | Op::ReadProperty(_) | Op::Constant(_) => Start,
+        Op::Negate | Op::BinOp(_) | Op::Cast(_) | Op::ReadState { .. } => None,
+        Op::WriteOutput(_) | Op::WriteState { .. } => Final,
+    }
+}
+
 fn node_has_edge_from_kind<'a>(
     program: &Program,
     edges: impl Iterator<Item = OperationGraphEdgeRef<'a>>,
@@ -39,18 +65,12 @@ pub fn insert_start_final_edges(
     // We want to do as much validation as possible so that the diagnostics are good.
     let mut validation_succeeded = true;
     for node in nodes.iter() {
-        let (needs_start, needs_final) = match program
-            .graph
-            .node_weight(*node)
-            .unwrap()
-            .op
-            .get_descriptor()
-            .implicit_edges
-        {
-            ImplicitEdgeKind::NoImplicitEdges => (false, false),
-            ImplicitEdgeKind::Start => (true, false),
-            ImplicitEdgeKind::Final => (false, true),
-        };
+        let (needs_start, needs_final) =
+            match implicit_edge_kind(&program.graph.node_weight(*node).unwrap().op) {
+                ImplicitEdgeKind::None => (false, false),
+                ImplicitEdgeKind::Start => (true, false),
+                ImplicitEdgeKind::Final => (false, true),
+            };
 
         let has_start = node_has_edge_from_kind(
             program,
@@ -99,16 +119,10 @@ pub fn insert_start_final_edges(
 
     // Now we just do the simple loop.
     for node in nodes.iter() {
-        let implicit_kind = program
-            .graph
-            .node_weight(*node)
-            .unwrap()
-            .op
-            .get_descriptor()
-            .implicit_edges;
+        let implicit_kind = implicit_edge_kind(&program.graph.node_weight(*node).unwrap().op);
 
         match implicit_kind {
-            ImplicitEdgeKind::NoImplicitEdges => {}
+            ImplicitEdgeKind::None => {}
             ImplicitEdgeKind::Start => {
                 program.graph.update_edge(
                     program.start_node,
