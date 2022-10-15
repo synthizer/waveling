@@ -9,7 +9,7 @@ pub struct Edge {
     ///
     /// If multiple edges are connected to the same input they must unify, and will implicitly sum.  This is expanded
     /// later, so that when we reach the backend, all summing is explicit addition nodes.
-    pub input: u16,
+    pub input: usize,
 
     pub source_loc: Option<SourceLoc>,
 }

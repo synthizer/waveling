@@ -12,6 +12,7 @@ use crate::*;
 pub type OperationGraph = StableDiGraph<Node, Edge>;
 pub type OperationGraphNode = NodeIndex<DefaultIx>;
 pub type OperationGraphEdgeRef<'a> = petgraph::stable_graph::EdgeReference<'a, Edge>;
+pub type OperationGraphEdgeIndex = petgraph::graph::EdgeIndex;
 
 /// The program represents a graph defining an audio effect, and its surrounding environment.
 ///
@@ -145,7 +146,7 @@ impl Program {
         &mut self,
         from_node: OperationGraphNode,
         to_node: OperationGraphNode,
-        to_input: u16,
+        to_input: usize,
         source_loc: Option<SourceLoc>,
     ) -> Result<()> {
         let edge = Edge {
@@ -167,10 +168,10 @@ impl Program {
         let mut seen_incoming = HashSet::new();
 
         for i in self.graph.edges_directed(to_node, Direction::Incoming) {
-            seen_incoming.insert((i.target(), i.weight().input));
+            seen_incoming.insert((i.source(), i.weight().input));
         }
 
-        if seen_incoming.contains(&(to_node, to_input)) {
+        if seen_incoming.contains(&(from_node, to_input)) {
             anyhow::bail!(
                 "Duplicate connections from a source to a target for the same input are disallowed"
             );
