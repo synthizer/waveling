@@ -201,7 +201,7 @@ mod tests {
 
         insert_start_final_edges(&mut program, &mut DiagnosticCollection::new()).unwrap();
 
-        let gv = program.graphvis();
+        let gv = program.graphviz();
 
         // All of the start nodes should have an incoming edge from the initial node, and no edges to the final node.
         for n in starts.iter().cloned() {

@@ -355,8 +355,8 @@ impl Program {
         })
     }
 
-    /// Build a graphvis string for debugging purposes.
-    pub fn graphvis(&self) -> String {
+    /// Build a graphviz string for debugging purposes.
+    pub fn graphviz(&self) -> String {
         petgraph::dot::Dot::new(&self.graph).to_string()
     }
 }
@@ -380,7 +380,7 @@ mod tests {
         assert!(
             program.connect(n1, n2, 0, None).is_err(),
             "{}",
-            program.graphvis()
+            program.graphviz()
         );
         // But a duplicate edge to a different input should be fine.
         program.connect(n1, n2, 1, None).unwrap();
