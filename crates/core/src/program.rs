@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use anyhow::Result;
 use petgraph::{prelude::*, stable_graph::DefaultIx};
 
@@ -160,8 +162,20 @@ impl Program {
             anyhow::bail!("Graph doesn't contain the destination node");
         }
 
-        // We do actually want to allow multiple edges here, since the output could in theory connect to the same
-        // input.
+        // We do actually want to allow multiple edges here, since the input it's connecting to has to be part of the
+        // edge.  But we don't want two edges to the same input, so we validate that manually.
+        let mut seen_incoming = HashSet::new();
+
+        for i in self.graph.edges_directed(to_node, Direction::Incoming) {
+            seen_incoming.insert((i.target(), i.weight().input));
+        }
+
+        if seen_incoming.contains(&(to_node, to_input)) {
+            anyhow::bail!(
+                "Duplicate connections from a source to a target for the same input are disallowed"
+            );
+        }
+
         self.graph.add_edge(from_node, to_node, edge);
         Ok(())
     }
@@ -350,5 +364,25 @@ impl Program {
 impl Default for Program {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn disallows_duplicate_edges() {
+        let mut program = Program::new();
+        let n1 = program.op_add_node(None).unwrap();
+        let n2 = program.op_add_node(None).unwrap();
+        program.connect(n1, n2, 0, None).unwrap();
+        assert!(
+            program.connect(n1, n2, 0, None).is_err(),
+            "{}",
+            program.graphvis()
+        );
+        // But a duplicate edge to a different input should be fine.
+        program.connect(n1, n2, 1, None).unwrap();
     }
 }
