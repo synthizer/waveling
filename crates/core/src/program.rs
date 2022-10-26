@@ -40,7 +40,7 @@ pub struct Program {
 macro_rules! decl_binop_method {
     ($name: ident, $op: ident) => {
         pub fn $name(&mut self, source_loc: Option<SourceLoc>) -> Result<OperationGraphNode> {
-            Ok(self.op_node(Op::BinOp(BinOp::$op), None, source_loc))
+            Ok(self.op_node(Op::BinOp(BinOp::$op), source_loc))
         }
     };
 }
@@ -48,7 +48,7 @@ macro_rules! decl_binop_method {
 macro_rules! decl_simple_op_method {
     ($name: ident, $op: ident) => {
         pub fn $name(&mut self, source_loc: Option<SourceLoc>) -> Result<OperationGraphNode> {
-            Ok(self.op_node(Op::$op, None, source_loc))
+            Ok(self.op_node(Op::$op, source_loc))
         }
     };
 }
@@ -59,13 +59,12 @@ impl Program {
 
         let start_node = graph.add_node(Node {
             op: Op::Start,
-            data_type: None,
+
             source_loc: None,
         });
 
         let final_node = graph.add_node(Node {
             op: Op::Final,
-            data_type: None,
             source_loc: None,
         });
 
@@ -156,17 +155,8 @@ impl Program {
         Ok(())
     }
 
-    fn op_node(
-        &mut self,
-        op: Op,
-        data_type: Option<DataType>,
-        source_loc: Option<SourceLoc>,
-    ) -> OperationGraphNode {
-        let n = Node {
-            op,
-            data_type,
-            source_loc,
-        };
+    fn op_node(&mut self, op: Op, source_loc: Option<SourceLoc>) -> OperationGraphNode {
+        let n = Node { op, source_loc };
         self.graph.add_node(n)
     }
 
@@ -191,7 +181,7 @@ impl Program {
             );
         }
 
-        Ok(self.op_node(Op::ReadInput(input), None, source_loc))
+        Ok(self.op_node(Op::ReadInput(input), source_loc))
     }
 
     pub fn op_read_property_node(
@@ -207,7 +197,7 @@ impl Program {
             );
         }
 
-        Ok(self.op_node(Op::ReadProperty(property), None, source_loc))
+        Ok(self.op_node(Op::ReadProperty(property), source_loc))
     }
 
     pub fn op_write_output_node(
@@ -223,7 +213,7 @@ impl Program {
             );
         }
 
-        Ok(self.op_node(Op::WriteOutput(output), None, source_loc))
+        Ok(self.op_node(Op::WriteOutput(output), source_loc))
     }
 
     pub fn op_cast_node(
@@ -231,7 +221,7 @@ impl Program {
         to_ty: PrimitiveType,
         source_loc: Option<SourceLoc>,
     ) -> Result<OperationGraphNode> {
-        Ok(self.op_node(Op::Cast(to_ty), None, source_loc))
+        Ok(self.op_node(Op::Cast(to_ty), source_loc))
     }
 
     pub fn op_constant_node(
@@ -239,7 +229,7 @@ impl Program {
         constant: Constant,
         source_loc: Option<SourceLoc>,
     ) -> Result<OperationGraphNode> {
-        Ok(self.op_node(Op::Constant(constant), None, source_loc))
+        Ok(self.op_node(Op::Constant(constant), source_loc))
     }
 
     /// Get a cloned source location for a node.
