@@ -29,8 +29,8 @@ fn implicit_edge_kind(o: &Op) -> ImplicitEdgeKind {
     match o {
         Op::Start | Op::Final => None,
         Op::ReadInput(_) | Op::Clock | Op::Sr | Op::ReadProperty(_) | Op::Constant(_) => Start,
-        Op::Negate | Op::BinOp(_) | Op::Cast(_) | Op::ReadState { .. } => None,
-        Op::WriteOutput(_) | Op::WriteState { .. } => Final,
+        Op::Negate | Op::BinOp(_) | Op::Cast(_) => None,
+        Op::WriteOutput(_) => Final,
     }
 }
 
@@ -161,7 +161,6 @@ mod tests {
         let input_index = program.add_input(PrimitiveType::F32, 3).unwrap();
         let output_index = program.add_output(PrimitiveType::F32, 3).unwrap();
         let prop_index = program.add_property(PrimitiveType::F32).unwrap();
-        let state_index = program.add_state(PrimitiveType::F32, 3, 10).unwrap();
 
         // These nodes should have an edge from the start node.  Put them in an array, then reduce that array into an
         // add node, then connect that add node to the ones that should have an edge to the final node.
@@ -188,12 +187,7 @@ mod tests {
             })
             .unwrap();
 
-        let ends = vec![
-            program
-                .op_write_state_direct_node(state_index, None)
-                .unwrap(),
-            program.op_write_output_node(output_index, None).unwrap(),
-        ];
+        let ends = vec![program.op_write_output_node(output_index, None).unwrap()];
 
         for n in ends.iter().cloned() {
             program.connect(final_add, n, 0, None).unwrap();

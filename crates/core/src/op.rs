@@ -42,30 +42,6 @@ pub enum Op {
     #[display(fmt = "ReadProperty({_0})")]
     ReadProperty(usize),
 
-    /// Read a given state.
-    ///
-    /// The input is the index to read from.
-    ///
-    /// The location must be an integral type.
-    #[display(fmt = "Read({state} mod={modulus})")]
-    ReadState {
-        state: usize,
-
-        /// If true, this read should be mod the state's length.
-        modulus: bool,
-    },
-
-    /// Write to a state.
-    ///
-    /// The 0th input is the value to write and the 1st input the location.
-    #[display(fmt = "WriteState({state}, mod={modulus})")]
-    WriteState {
-        state: usize,
-
-        /// If true, take the given location as mod the state length.
-        modulus: bool,
-    },
-
     /// Read the clock, an i64 integer that increments every sample.
     Clock,
 
@@ -146,19 +122,16 @@ impl Op {
                 inputs: Cow::Borrowed(&[]),
             }),
             // these must have a connection from the start node.
-            Op::ReadInput(_)
-            | Op::ReadProperty(_)
-            | Op::Constant(_)
-            | Op::ReadState { .. }
-            | Op::Clock
-            | Op::Sr => Cow::Borrowed(&OpDescriptor {
-                commutative: false,
+            Op::ReadInput(_) | Op::ReadProperty(_) | Op::Constant(_) | Op::Clock | Op::Sr => {
+                Cow::Borrowed(&OpDescriptor {
+                    commutative: false,
 
-                inputs: Cow::Borrowed(&[InputDescriptor {
-                    input_kind: InputKind::PureDependency,
-                    denied_primitives: None,
-                }]),
-            }),
+                    inputs: Cow::Borrowed(&[InputDescriptor {
+                        input_kind: InputKind::PureDependency,
+                        denied_primitives: None,
+                    }]),
+                })
+            }
             Op::BinOp(o) => Cow::Owned(binop_to_descriptor(o)),
             Op::Negate => Cow::Owned(OpDescriptor {
                 commutative: false,
@@ -177,7 +150,7 @@ impl Op {
                     denied_primitives: None,
                 }]),
             }),
-            Op::WriteOutput { .. } | Op::WriteState { .. } => Cow::Borrowed(&OpDescriptor {
+            Op::WriteOutput { .. } => Cow::Borrowed(&OpDescriptor {
                 commutative: false,
 
                 inputs: Cow::Borrowed(&[InputDescriptor {

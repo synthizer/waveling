@@ -114,31 +114,6 @@ impl Program {
         Ok(self.properties.len() - 1)
     }
 
-    /// Add a state, a memory location consisting of some number of consecutive vectors.
-    ///
-    /// The width of the vector and length of the state must both be nonzero.
-    ///
-    /// Returns the index to the state.
-    pub fn add_state(
-        &mut self,
-        primitive: PrimitiveType,
-        width: u64,
-        length: u64,
-    ) -> Result<usize> {
-        if width == 0 {
-            anyhow::bail!("State vector widths must not be zero");
-        }
-
-        if length == 0 {
-            anyhow::bail!("State lengths must not be zero");
-        }
-
-        let vd = VectorDescriptor { primitive, width };
-        let st = State { length, vector: vd };
-        self.states.push(st);
-        Ok(self.states.len() - 1)
-    }
-
     /// Connect a node to the given input of another node.
     ///
     /// All nodes currently have one output only.
@@ -249,75 +224,6 @@ impl Program {
         }
 
         Ok(self.op_node(Op::WriteOutput(output), None, source_loc))
-    }
-
-    fn op_read_state_node_impl(
-        &mut self,
-        state: usize,
-        source_loc: Option<SourceLoc>,
-        modulus: bool,
-    ) -> Result<OperationGraphNode> {
-        if state >= self.states.len() {
-            anyhow::bail!(
-                "Only {} states available, but tried to read state {}",
-                self.states.len(),
-                state
-            );
-        }
-
-        Ok(self.op_node(Op::ReadState { state, modulus }, None, source_loc))
-    }
-
-    fn op_write_state_node_impl(
-        &mut self,
-        state: usize,
-        source_loc: Option<SourceLoc>,
-        modulus: bool,
-    ) -> Result<OperationGraphNode> {
-        if state >= self.states.len() {
-            anyhow::bail!(
-                "Only {} states available, but tried to write state {}",
-                self.states.len(),
-                state
-            );
-        }
-
-        Ok(self.op_node(Op::WriteState { state, modulus }, None, source_loc))
-    }
-
-    /// Read a state directly, without modulus.
-    pub fn op_read_state_direct_node(
-        &mut self,
-        state: usize,
-        source_loc: Option<SourceLoc>,
-    ) -> Result<OperationGraphNode> {
-        self.op_read_state_node_impl(state, source_loc, false)
-    }
-
-    /// Read a state, with modulus.
-    pub fn op_read_state_mod_node(
-        &mut self,
-        state: usize,
-        source_loc: Option<SourceLoc>,
-    ) -> Result<OperationGraphNode> {
-        self.op_read_state_node_impl(state, source_loc, true)
-    }
-
-    /// Write a state directly, without modulus on the location in the state.
-    pub fn op_write_state_direct_node(
-        &mut self,
-        state: usize,
-        source_loc: Option<SourceLoc>,
-    ) -> Result<OperationGraphNode> {
-        self.op_write_state_node_impl(state, source_loc, false)
-    }
-
-    pub fn op_write_state_mod_node(
-        &mut self,
-        state: usize,
-        source_loc: Option<SourceLoc>,
-    ) -> Result<OperationGraphNode> {
-        self.op_write_state_node_impl(state, source_loc, true)
     }
 
     pub fn op_cast_node(
