@@ -102,7 +102,7 @@ impl Program {
         }
 
         self.outputs.push(VectorDescriptor { primitive, width });
-        Ok(self.inputs.len() - 1)
+        Ok(self.outputs.len() - 1)
     }
 
     /// Add a property, a scalar input to the program.

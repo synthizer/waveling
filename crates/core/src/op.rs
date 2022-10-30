@@ -51,6 +51,7 @@ pub enum Op {
     /// Cast the only input to the given primitive type.
     ///
     /// We don't perform implicit casts because it is important to always know where they happen.
+    #[display(fmt = "cast({})", _0)]
     Cast(PrimitiveType),
 
     /// The synthetic start node is used to have a single entry node, rather than n entry nodes.

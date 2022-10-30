@@ -36,6 +36,17 @@ impl MaterializedInputs {
     ///
     /// panics if the node isn't in the graph.
     pub fn materialize(program: &Program, node: OperationGraphNode) -> MaterializedInputs {
+        Self::materialize_with_filter(program, node, |_| true)
+    }
+
+    /// Materialize the inputs for a node, but only if a filter returns true.
+    ///
+    /// This is used for instance to filter out the start node.
+    pub fn materialize_with_filter(
+        program: &Program,
+        node: OperationGraphNode,
+        mut filter: impl FnMut(OperationGraphNode) -> bool,
+    ) -> MaterializedInputs {
         program
             .graph
             .node_weight(node)
@@ -48,6 +59,10 @@ impl MaterializedInputs {
         for e in program.graph.edges_directed(node, Direction::Incoming) {
             let owned_edge = e.id();
             let source_node = e.source();
+            if !filter(source_node) {
+                continue;
+            }
+
             let target_node = e.target();
 
             // If this edge has an input greater than what's in our vec, we must extend it.

@@ -51,6 +51,6 @@ impl Display for Constant {
             Constant::I64(x) => ("i64", x.iter().join(", ")),
         };
 
-        write!(f, "{}<{}>", ty, inner)
+        write!(f, "{}[{}]", ty, inner)
     }
 }

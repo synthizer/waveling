@@ -106,6 +106,17 @@ impl DiagnosticCollection {
     pub fn add_diagnostic(&mut self, diag: Diagnostic) {
         self.errors.push(diag);
     }
+
+    pub fn add_simple_diagnostic(
+        &mut self,
+        program: &Program,
+        message: impl Into<Cow<'static, str>>,
+        source_loc: Option<SourceLoc>,
+    ) {
+        let builder = DiagnosticBuilder::new(message, source_loc);
+        let diag = builder.build(program);
+        self.add_diagnostic(diag);
+    }
 }
 
 impl Display for DiagnosticCollection {

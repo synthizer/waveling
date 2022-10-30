@@ -23,6 +23,10 @@ pub struct VectorDescriptor {
 }
 
 impl VectorDescriptor {
+    pub fn new(primitive: PrimitiveType, width: u64) -> VectorDescriptor {
+        VectorDescriptor { primitive, width }
+    }
+
     pub fn new_bool(width: u64) -> Self {
         Self {
             primitive: PrimitiveType::Bool,

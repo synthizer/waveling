@@ -32,10 +32,10 @@ fn build_primitive_type_mismatch_err(
         ),
         None,
     );
-    builder.node_ref(format!("This node is a {}", prim1), node1);
+    builder.node_ref(format!("This node is {}", prim1), node1);
     builder.node_ref(
         format!(
-            "But this node is a {}, which is of a different primitive type",
+            "But this node is {}, which is of a different primitive type",
             prim2
         ),
         node2,
