@@ -11,6 +11,7 @@ derive_more = "0.99.17"
 indenter = { version = "0.3.3", features = ["std"] }
 itertools = "0.10.5"
 mlua = { version = "0.8.3", features = ["lua54", "vendored"] }
+paste = "1.0.9"
 petgraph = "0.6.2"
 smallvec = { version = "1.10.0", features = ["const_generics", "union", "const_new", "write"] }
 strum = { version = "0.24.1", features = ["derive"] }

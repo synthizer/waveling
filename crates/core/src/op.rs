@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::{Constant, PrimitiveType};
+use crate::*;
 
 /// Binary operations that we support.
 #[derive(
@@ -169,6 +169,22 @@ impl Op {
                     denied_primitives: None,
                 }]),
             }),
+        }
+    }
+}
+
+impl BinOp {
+    /// Fold two constants according to the operation this BinOp represents.
+    fn fold_constants(
+        &self,
+        left: &Constant,
+        right: &Constant,
+    ) -> Result<Constant, ConstantFoldingError> {
+        match self {
+            BinOp::Add => left.fold_add(right),
+            BinOp::Sub => left.fold_sub(right),
+            BinOp::Mul => left.fold_mul(right),
+            BinOp::Div => left.fold_div(right),
         }
     }
 }
